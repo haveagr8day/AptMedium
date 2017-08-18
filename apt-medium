@@ -48,36 +48,27 @@ SYNOPSIS
 
 
 function sync_apt-medium (
-	$MACHINE_NAME ='hostname -f'
+	$MACHINE_NAME ='hostname'
 
 	# allways override $MACHINE_NAME/etc/apt before installing packages
 	# (untrustable keys and config on medium)
-
-	# better only  mkdir if they don't exist yet:
-	mkdir machine
-	mkdir machine/$MACHINE_NAME
-	mkdir lists
-	mkdir lists/partial
-	mkdir archives
-	mkdir archives/partial
 	
+	#possibly check if files differ before writring files
 	cp /var/lib/dpkg/status $APT_MEDIUM_DIR/machine/$MACHINE_NAME/$MACHINE_NAME-dpkg-status
 	cp -r  /etc/apt  $APT_MEDIUM_DIR/$MACHINE_NAME/etc/
 	mv $APT_MEDIUM_DIR/$MACHINE_NAME/etc/apt/apt.conf $APT_MEDIUM_DIR/$MACHINE_NAME/etc/apt/apt.conf-$MACHINE_NAME
 
-	# if apt-medium is not run from the $$APT_MEDIUM_DIR itself
-	cp /usr/bin/apt-medium $APT_MEDIUM_DIR/
-	cp /var/share/doc/apt-medium/apt-medium.bat $APT_MEDIUM_DIR/
-	cp /var/share/doc/apt-medium/w32bin $APT_MEDIUM_DIR/
+	# check if apt-medium files on $APT_MEDIUM_DIR are unaltered and up to date
+	diff /usr/bin/apt-medium $APT_MEDIUM_DIR/apt-medium
+	diff /var/share/doc/apt-medium/apt-medium.bat $APT_MEDIUM_DIR/apt-medium.bat
+	diff /var/share/doc/apt-medium/w32bin/* $APT_MEDIUM_DIR/w32bin/*
+	# warn / update with newer version
 
 	#TODO: cp newer lists from machine's /var/lib/apt to apt-medium or vice versa!
 	
 	#create apt-medium.conf
 	#apt-medium.conf is overrideing Download-Only="yes", state-dir, List-Cleanup,
-	#and cache-dir from install machine's config on the download machine
-
-
-
+	#and cache-dir from install machine's config on the download machine:
 cat > $APT_MEDIUM_DIR/$MACHINE_NAME/etc/apt/apt-medium.conf-$MACHINE_NAME << EOP
 
 
@@ -141,17 +132,45 @@ EOP
 )
 
 
-# Missing code: first extract given command line options (--machine=MACHINE_NAME, --ui=APT_TOOL)
-# and keep the remaining in $APT_COMMAND
+
+# Missing code: first extract given command line options (--machine=MACHINE_NAME, --ui=APT_TOOL
+# and --help) and keep the remaining in $APT_COMMAND
 
 
-# APT_TOOL defaults to apt-get and
-# apt-medium saves the requested $APT_COMMANDs.
+# offer to create apt-medium
+if $PWD does not contain machine, lists, and archives directory ; then
+	echo "The current direcory does not seem to be an apt-medium directory do you want to create one?"
+	read DO_CREATE
+	if $PWD does not end with /apt-medium; then
+	  mkdir apt-medium
+	  cd apt-medium
+	fi
+	# better only  mkdir if they don't exist yet (check before):
+	mkdir machine
+	mkdir machine/$MACHINE_NAME
+	mkdir lists
+	mkdir lists/partial
+	mkdir archives
+	mkdir archives/partial
+
+fi
+
+
+
+if [ "$#" = 0 ] (no parameters specified); then
+  $1="--help"
+fi
+# Display usage if --help is true
+
+
+
+# APT_TOOL should default to apt-get, or aptitude as this is recomended now?
+# And apt-medium saves the requested $APT_COMMANDs.
 
 # i.e. with $APT_TOOL=apt-get and $APT_COMMAND="install <package names>"
 # this will be executed in download-only or print-uris
-# mode, depending if we are on the download or install machine, saved,
-# and later be executed without the need to download anything for
+# mode, depending if we are on the download or install machine, and saved.
+# To be used later without the need to download anything for
 # installation on the install machine or downloaded without
 # installing anything on download machines.
 
@@ -165,8 +184,9 @@ EOP
 # Missing code: Check for $APT_TOOL, if unavailable default to wget mode
 # if wget is unavailable defaut to print uri_dl_list
 if $APT_TOOL is empty $APT_TOOL=aptitude
-if 'which $APT_TOOL' is empty $APT_TOOL=aptitude
-if 'which $APT_TOOL' is empty $APT_TOOL=wget
+if 'which $APT_TOOL' is empty $APT_TOOL=aptitude # do fallback for something that is not installed
+if 'which $APT_TOOL' is empty $APT_TOOL=apt-get # a debian box without aptitude?
+if 'which $APT_TOOL' is empty $APT_TOOL=wget # no debian, no apt-get
 if 'which $APT_TOOL' is empty echo "no wget download on availabe on this machine"
 
 case $APT_COMMAND
@@ -202,7 +222,9 @@ case $APT_COMMAND
 
 else
    # sync on install machines (untrustable keys on medium)
-   if $MACHINE_NAME = 'hostname -f' or "" sync_apt-medium
+   if $MACHINE_NAME = 'hostname' or "" then
+      sync_apt-medium
+   fi
 
    if $APT_COMMAND != update
       echo $APT_COMMAND >> $APT_MEDIUM_DIR/$MACHINE_NAME/$MACHINE_NAME-apt_command_list
@@ -228,7 +250,7 @@ else
 
 
    # install what is available on install machines
-   if $MACHINE_NAME = 'hostname -f' or "" 
+   if $MACHINE_NAME = 'hostname' or "" 
 	if the addition to uri_list had zero legth and $APT_COMMAND is not empty do
 	     $APT_TOOL -o dir::etc::status=/var/lib/dpkg/status $APT_COMMAND
 	fi
