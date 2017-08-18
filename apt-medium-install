@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# apt-medium-install
+#
+# This is only a proof of concept script,
+# if you would like to improve somthing
+# please edit apt-medium itself instead.
+#
+
+
+MACHINE_NAME=`hostname`
+export APT_CONFIG="./machine/$MACHINE_NAME/etc/apt/apt-medium.conf-$MACHINE_NAME"
+
+apt-get check
+
+# some bug? prevents apt-get to install from relative paths
+# so we need to substitute them with absolute paths during runtime
+cp ./machine/$MACHINE_NAME/etc/apt/apt-medium.conf-$MACHINE_NAME ./machine/$MACHINE_NAME/etc/apt/apt-medium.conf-$MACHINE_NAME.relative
+sed s:./archives/:"$PWD"/archives/: ./machine/$MACHINE_NAME/etc/apt/apt-medium.conf-$MACHINE_NAME.relative > ./machine/$MACHINE_NAME/etc/apt/apt-medium.conf-$MACHINE_NAME
+
+source ./machine/$MACHINE_NAME/install-commands
+rm ./machine/$MACHINE_NAME/install-commands
+
+rm ./machine/$MACHINE_NAME/etc/apt/apt-medium.conf-$MACHINE_NAME
+mv ./machine/$MACHINE_NAME/etc/apt/apt-medium.conf-$MACHINE_NAME.relative ./machine/$MACHINE_NAME/etc/apt/apt-medium.conf-$MACHINE_NAME
+

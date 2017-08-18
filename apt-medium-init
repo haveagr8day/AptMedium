@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# apt-medium-init
+#
+# This is only a proof of concept script,
+# if you would like to improve something
+# please edit apt-medium itself instead.
+#
+
+MACHINE_NAME=`hostname`
+
+
+echo "mkdir will fail if init has run before, that's no problem."
+mkdir machine
+mkdir machine/$MACHINE_NAME
+mkdir lists
+mkdir lists/partial
+mkdir archives
+mkdir archives/partial
+cp /var/lib/dpkg/status machine/$MACHINE_NAME/$MACHINE_NAME-dpkg-status
+
+mkdir machine/$MACHINE_NAME/etc
+cp -r /etc/apt  machine/$MACHINE_NAME/etc/
+
+echo "moving apt.conf will fail if there is no apt.conf present, that's no problem."
+mv machine/$MACHINE_NAME/etc/apt/apt.conf machine/$MACHINE_NAME/etc/apt/apt.conf-$MACHINE_NAME
+
+cat > machine/$MACHINE_NAME/etc/apt/apt-medium.conf-$MACHINE_NAME << EOP
+
+#include ./machine/$MACHINE_NAME/etc/apt/apt.conf-$MACHINE_NAME;
+
+APT
+   {
+   /* FIXME: At the moment we just assume to download
+      for i386 Architecture */
+
+   Architecture "i386";
+
+   Get::Download-Only "true";
+
+   /* keep all lists, i.e. alse those not used in current
+      sources.lists on apt-medium for use by offline machines*/
+
+   Get::List-Cleanup "false";
+
+   };
+
+
+Dir
+  {
+
+  State "./machine/$MACHINE_NAME/";
+  State::status "$MACHINE_NAME-dpkg-status";
+  State::Lists "./lists/";
+  
+  Cache "./machine/$MACHINE_NAME/";
+  Cache::archives "./archives/";
+
+  Etc "./machine/$MACHINE_NAME/etc/apt/";
+
+  };
+
+EOP
