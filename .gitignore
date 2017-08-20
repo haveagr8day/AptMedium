@@ -1,5 +1,9 @@
+*.tmp
+*.pyc
 archives
 lists
+medium_state
 system_info
+usr
 .project
 .pydevproject
