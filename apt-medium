@@ -30,13 +30,14 @@ def main():
     sub_parsers = main_parser.add_subparsers(dest='action')
     
     main_parser.add_argument('-im', '--install-medium', type=str, default=os.getcwd(), help='path to installation medium (defaults to current working directory)')
+    main_parser.add_argument('-m', '--install-medium', type=str, default=os.getcwd(), help='path to installation medium (defaults to current working directory)')
     
     # Create a parser for the init command
     init_parser = sub_parsers.add_parser('init', help='initialize or update the dpkg status and apt configuration for this system in the installation medium')
-
+    
     # Create a parser for the install command
     install_parser = sub_parsers.add_parser('install', help='install or upgrade a package (or queue the action if downloads are needed)')
-
+    
     # Create a parser for the download command
     download_parser = sub_parsers.add_parser('download', help='download files/packages needed to complete pending actions')
     
@@ -46,71 +47,100 @@ def main():
         os.chdir(args.install_medium)
     else:
         print('The specified installation medium (' + args.install_medium + ') does not exist.')
-	exit(-1)
+        exit(-1)
     
     if args.action == 'init':
-        init_action(args)
+        exitCode = init_action(args)
     elif args.action == 'install':
-        install_action(args)
+        exitCode = install_action(args)
     elif args.action == 'download':
-        download_action(args)
+        exitCode = download_action(args)
+    
+    exit(exitCode)
+
+def sync_local_lists():
+    medium_lists_dir = 'lists'
+    local_lists_dir = '/var/lib/apt/lists'
+    for file in os.listdir(local_lists_dir):
+        src_file = os.path.join(local_lists_dir, file)
+        dst_file = os.path.join(medium_lists_dir, file)
+        
+        if file == 'lock' or not os.path.isfile(src_file):
+            continue
+        
+        if not os.path.exists(dst_file) or os.path.getmtime(src_file) > os.path.getmtime(dst_file):
+            shutil.copy(src_file,dst_file)
+    
+
 
 def init_action(args):
     hostname = socket.gethostname()
     
-    INFO_DIR = 'system_info'
-    SYSTEM_DIR = os.path.join(INFO_DIR, hostname)
-    SYSTEM_ETC_DIR = os.path.join(SYSTEM_DIR, 'etc')
-
-    LISTS_DIR = 'lists'
-    LISTS_PARTIAL_DIR = os.path.join(LISTS_DIR, 'partial')
-
-    ARCHIVES_DIR = 'archives'
-    ARCHIVES_PARTIAL_DIR = os.path.join(ARCHIVES_DIR, 'partial')
-
+    info_dir = 'system_info'
+    system_dir = os.path.join(info_dir, hostname)
+    system_etc_dir = os.path.join(system_dir, 'etc')
+    
+    lists_dir = 'lists'
+    lists_partial_dir = os.path.join(lists_dir, 'partial')
+    
+    archives_dir = 'archives'
+    archives_partial_dir = os.path.join(archives_dir, 'partial')
+    
     # Create directory structure
-    for directory in [INFO_DIR, SYSTEM_DIR, SYSTEM_ETC_DIR,
-                      LISTS_DIR, LISTS_PARTIAL_DIR, ARCHIVES_DIR,
-                      ARCHIVES_PARTIAL_DIR]:
+    for directory in [info_dir, system_dir, system_etc_dir,
+                      lists_dir, lists_partial_dir, archives_dir,
+                      archives_partial_dir]:
         if not os.path.exists(directory):
             os.mkdir(directory)
     
     # Copy necessary information about the system
-    SYSTEM_APT_DIR = os.path.join(SYSTEM_ETC_DIR, 'apt')
-    shutil.copy('/var/lib/dpkg/status', os.path.join(SYSTEM_DIR, 'dpkg-status'))
-    distutils.dir_util.copy_tree('/etc/apt', SYSTEM_APT_DIR)
+    system_apt_dir = os.path.join(system_etc_dir, 'apt')
+    shutil.copy('/var/lib/dpkg/status', os.path.join(system_dir, 'dpkg-status'))
+    if os.path.exists(system_apt_dir):
+        shutil.rmtree(system_apt_dir)
+    distutils.dir_util.copy_tree('/etc/apt', system_apt_dir)
+    
+    # Create an empty apt.conf.d folder if one doesn't exist
+    apt_conf_d_dir = os.path.join(system_apt_dir, 'apt.conf.d')
+    if not os.path.exists(apt_conf_d_dir):
+        os.mkdir(apt_conf_d_dir)
     
     # Create an empty apt.conf file if one doesn't exist
-    APT_CONF = os.path.join(SYSTEM_APT_DIR, 'apt.conf')
-    if not os.path.exists(APT_CONF):
-        open(APT_CONF, 'a').close()
+    apt_conf = os.path.join(system_apt_dir, 'apt.conf')
+    open(apt_conf, 'a').close()
     
-    # Create a config file for downloading data with apt
-    APT_MEDIUM_CONF = os.path.join(SYSTEM_APT_DIR, 'apt-medium.conf')
-    am_conf = open(APT_MEDIUM_CONF, 'w')
-    am_conf.write('#include ./' + APT_MEDIUM_CONF + ';\n')
+    # Create a base configuration that loads apt.conf.d and apt.conf
+    apt_medium_conf = os.path.join(system_apt_dir, 'apt-medium.conf')
+    am_conf = open(apt_medium_conf, 'w')
     
     am_conf.write('APT\n')
     am_conf.write('    {\n')
-    for arch in subprocess.check_output(['dpkg', '--print-architecture']).split(): 
-        am_conf.write('    Architectures "' + arch + '";\n')
-    am_conf.write('    Get::Download-Only "true";\n')
+    am_conf.write('    Architecture "' + subprocess.check_output(['dpkg', '--print-architecture']).splitlines()[0] + '";\n');
+    foreign_archs = subprocess.check_output(['dpkg', '--print-foreign-architectures']).splitlines()
+    if len(foreign_archs) > 0:
+        am_conf.write('    Architectures {')
+        for arch in foreign_archs:
+            am_conf.write('"' + arch + '";')
+        am_conf.write('};\n')
     # keep all lists (i.e. those not in current sources.list file) on apt-medium for use by offline machines
     am_conf.write('    Get::List-Cleanup "false";\n')
     am_conf.write('    };\n')
-
+    
     am_conf.write('Dir\n')
     am_conf.write('    {\n')
-    am_conf.write('    State "./' + SYSTEM_DIR + '";\n')
+    am_conf.write('    State "/' + system_dir + '";\n')
     am_conf.write('    State::status "dpkg-status";\n')
-    am_conf.write('    State::Lists "./' + LISTS_DIR + '";\n')
-    am_conf.write('    Cache "./' + SYSTEM_DIR + '";\n')
-    am_conf.write('    Cache::archives "./' + ARCHIVES_DIR + '";\n')
-    am_conf.write('    Etc "./' + SYSTEM_APT_DIR + '";\n')
+    am_conf.write('    State::Lists "/' + lists_dir + '";\n')
+    am_conf.write('    Cache "/' + system_dir + '";\n')
+    am_conf.write('    Cache::archives "/' + archives_dir + '";\n')
+    am_conf.write('    Etc "/' + system_apt_dir + '";\n')
     am_conf.write('    };\n')
     
     am_conf.close()
-
+    
+    sync_local_lists()
+    
+    return 0
 
 def install_action(args):
     raise NotImplementedError()
