@@ -38,7 +38,8 @@ except ImportError as _:
 
 def main():
     main_parser = argparse.ArgumentParser(description='Manages an installation medium for installing/updating packages on multiple (possibly disconnected and/or remote) systems.')
-    sub_parsers = main_parser.add_subparsers(dest='action')
+    sub_parsers = main_parser.add_subparsers(dest='action', metavar='action')
+    sub_parsers.required = True
     
     main_parser.add_argument('-m', '--install-medium', type=str, default=os.getcwd(), help='path to installation medium (defaults to current working directory)')
     
@@ -137,6 +138,9 @@ def save_medium_state(state):
     state_file = open('medium_state', 'wb')
     pickle.dump(state, state_file, protocol=2)
     state_file.close()
+    
+def validate_queues():
+    raise NotImplementedError()
 
 def init_action(args):
     hostname = socket.gethostname()
@@ -215,7 +219,7 @@ def init_action(args):
     if hostname not in state['install_queue']:
         state['install_queue'][hostname] = []
         state['download_queue'][hostname] = []
-    save_medium_state(state)
+        save_medium_state(state)
     
     return 0
 
@@ -262,13 +266,17 @@ def install_action(args):
             print('Nothing to install')
             return 0
     
-    # Check if all needed downloads are present
+    # Check if all needed downloads are present and gather detailed output of operation
     uris = None
     try:
         check_parms = list(parms)
         check_parms.append('--print-uris')
         check_parms.append('-qq')
         uris = subprocess.check_output(check_parms)
+        
+        detail_parms = list(parms)
+        detail_parms.append('--simulate')
+        detail_output = subprocess.check_output(detail_parms).splitlines()
     except subprocess.CalledProcessError as _:
         print('apt-get failed while checking for needed packages')
         return -1
@@ -292,21 +300,19 @@ def install_action(args):
         while True:
             print('Add to download queue? Yes (y), No(n), or Show Details (s):', end='')
             response = getch()
-            print('')
+            print(response)
             response = response.lower()
             if response == 'y' or response == 'n':
                 break
             elif response == 's':
-                try:
-                    detail_parms = list(parms)
-                    detail_parms.append('--simulate')
-                    detail_output = subprocess.check_output(detail_parms).splitlines()
-                    for line in detail_output:
-                        print(line)
-                        if re.search(r'[0-9]* newly installed', line):
-                            break
-                except subprocess.CalledProcessError as _:
-                    print('apt-get failed while attempting to show details')
+                print()
+                for line in detail_output:
+                    if re.search('Reading package lists', line) or re.search('Building dependency tree', line):
+                        continue
+                    print(line)
+                    if re.search(r'[0-9]* newly installed', line):
+                        break
+                print()
             else:
                 print('Invalid selection.')
         if response == 'y':
@@ -319,10 +325,63 @@ def install_action(args):
                     print(package + ' already queued for download')
             save_medium_state(state)
         else: # response == 'n'
-            return 0
+            pass
     else:
-        print('Ready to install')
-        raise NotImplementedError()
+        at_sim_details = False
+        nothing_to_do = True
+        for line in detail_output:
+            if not at_sim_details:
+                if re.search('is already the newest version', line):
+                    print(line)
+                if re.search(r'[0-9]* newly installed', line):
+                    at_sim_details = True
+            else:
+                nothing_to_do = False
+                break
+        if not nothing_to_do:
+            if not local_is_target:
+                print('Ready to install ' + ", ".join(packages) + ' on ' + target)
+            else:
+                print('Ready to install ' + ", ".join(packages))
+                while True:
+                    print('Continue with install? Yes (y), No(n), or Show Details (s):', end='')
+                    response = getch()
+                    print(response)
+                    response = response.lower()
+                    if response == 'y' or response == 'n':
+                        break
+                    elif response == 's':
+                        print()
+                        for line in detail_output:
+                            if re.search('Reading package lists', line) or re.search('Building dependency tree', line):
+                                continue
+                            print(line)
+                            if re.search(r'[0-9]* newly installed', line):
+                                break
+                        print()
+                    else:
+                        print('Invalid selection.')
+                if response == 'y':
+                    with subprocess.Popen(parms, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True) as proc:
+                        for line in p.stdout:
+                            print(line, end='')
+                    
+                        if p.returncode != 0:
+                            print('apt-get failed while installing packages')
+                            return -1
+                    
+                    print ('Installation successful')
+                    state = load_medium_state()
+                    for package in packages:
+                        if package in state['install_queue'][target]:
+                            state['install_queue'][target].remove(package)
+                    save_medium_state(state)
+                else: # response == 'n'
+                    pass
+        else:
+            print('All packages already installed/up-to-date')
+    
+    return 0
 
 def download_action(args):
     raise NotImplementedError()
