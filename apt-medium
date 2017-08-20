@@ -341,6 +341,35 @@ def install_action(args):
         if not nothing_to_do:
             if not local_is_target:
                 print('Ready to install ' + ", ".join(packages) + ' on ' + target)
+                while True:
+                    print('Add to install queue? Yes (y), No(n), or Show Details (s):', end='')
+                    response = getch()
+                    print(response)
+                    response = response.lower()
+                    if response == 'y' or response == 'n':
+                        break
+                    elif response == 's':
+                        print()
+                        for line in detail_output:
+                            if re.search('Reading package lists', line) or re.search('Building dependency tree', line):
+                                continue
+                            print(line)
+                            if re.search(r'[0-9]* newly installed', line):
+                                break
+                        print()
+                    else:
+                        print('Invalid selection.')
+                if response == 'y':
+                    state = load_medium_state()
+                    for package in packages:
+                        if package not in state['install_queue'][target]:
+                            state['install_queue'][target].append(package)
+                            print('Queued ' + package + ' for install')
+                        else:
+                            print(package + ' already queued for install')
+                    save_medium_state(state)
+                else: # response == 'n'
+                    pass
             else:
                 print('Ready to install ' + ", ".join(packages))
                 while True:
