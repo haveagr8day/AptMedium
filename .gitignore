@@ -2,8 +2,9 @@
 *.pyc
 archives
 lists
+lock
 medium_state
 system_info
-usr
+var
 .project
 .pydevproject

@@ -21,7 +21,6 @@
 from __future__ import print_function
 
 import argparse
-import distutils.dir_util
 import distutils.spawn
 import os
 import re
@@ -53,6 +52,7 @@ def main():
     
     # Create a parser for the download command
     download_parser = sub_parsers.add_parser('download', help='download files/packages needed to complete pending actions')
+    download_parser.add_argument('-t', '--target', type=str, help='the system to complete pending downloads for (default is all systems)')
     
     # TODO: Create a parser for the show-queue command
     
@@ -73,24 +73,12 @@ def main():
         print('Cannot find dpkg in PATH.')
         exit(-1)
     
-    if not distutils.spawn.find_executable('rsync'):
-        print('Cannot find rsync in PATH')
-        exit(-1)
-    
     args.install_medium = os.path.abspath(args.install_medium)
     
     if os.path.isdir(args.install_medium):
         os.chdir(args.install_medium)
     else:
         print('The specified installation medium (' + args.install_medium + ') does not exist.')
-        exit(-1)
-    
-    # Attempt to create a necessary symlink
-    try:
-        if not os.path.islink('usr'):
-            os.symlink('/usr','usr')
-    except Exception as _:
-        print('Failed to create a necessary symlink to /usr on installation medium.')
         exit(-1)
     
     try:
@@ -129,6 +117,10 @@ def sync_local_lists():
             shutil.copy(src_file,dst_file)
     
 def load_medium_state():
+    if not os.path.isfile('medium_state'):
+        print('medium_state file not found on the installation medium (' + os.getcwd() + ')')
+        print('check you have specified the correct medium and that at least one system has been initialized on the medium')
+        exit(-1)
     state_file = open('medium_state', 'rb')
     state = pickle.load(state_file)
     state_file.close()
@@ -155,10 +147,14 @@ def init_action(args):
     archives_dir = 'archives'
     archives_partial_dir = os.path.join(archives_dir, 'partial')
     
+    var_dir = 'var'
+    var_log_dir = os.path.join(var_dir, 'log')
+    var_log_apt_dir = os.path.join(var_log_dir, 'apt')
+    
     # Create directory structure
     for directory in [info_dir, system_dir, system_etc_dir,
                       lists_dir, lists_partial_dir, archives_dir,
-                      archives_partial_dir]:
+                      archives_partial_dir, var_dir, var_log_dir, var_log_apt_dir]:
         if not os.path.exists(directory):
             os.mkdir(directory)
     
@@ -173,7 +169,7 @@ def init_action(args):
     shutil.copy('/var/lib/dpkg/status', os.path.join(system_dir, 'dpkg-status'))
     if os.path.exists(system_apt_dir):
         shutil.rmtree(system_apt_dir)
-    distutils.dir_util.copy_tree('/etc/apt', system_apt_dir)
+    shutil.copytree('/etc/apt', system_apt_dir)
     
     # Create an empty apt.conf.d folder if one doesn't exist
     apt_conf_d_dir = os.path.join(system_apt_dir, 'apt.conf.d')
@@ -203,12 +199,12 @@ def init_action(args):
     
     am_conf.write('Dir\n')
     am_conf.write('    {\n')
-    am_conf.write('    State "/' + system_dir + '";\n')
+    am_conf.write('    State "./' + system_dir + '";\n')
     am_conf.write('    State::status "dpkg-status";\n')
-    am_conf.write('    State::Lists "/' + lists_dir + '";\n')
-    am_conf.write('    Cache "/' + system_dir + '";\n')
-    am_conf.write('    Cache::archives "/' + archives_dir + '";\n')
-    am_conf.write('    Etc "/' + system_apt_dir + '";\n')
+    am_conf.write('    State::Lists "./' + lists_dir + '";\n')
+    am_conf.write('    Cache "./' + system_dir + '";\n')
+    am_conf.write('    Cache::archives "./' + archives_dir + '";\n')
+    am_conf.write('    Etc "./' + system_apt_dir + '";\n')
     am_conf.write('    };\n')
     
     am_conf.close()
@@ -232,10 +228,14 @@ def install_action(args):
     target_info_dir = os.path.join(install_medium, 'system_info', target)
     target_apt_dir = os.path.join(target_info_dir, 'etc', 'apt')
     
+    state = load_medium_state()
     # Verify install target has been initialized
-    if not os.path.exists(target_info_dir):
-        print('Cannot find target (' + target + ') check the spelling is correct and that the target has been initialized on the medium')
+    if not os.path.exists(target_info_dir) or target not in state['install_queue']:
+        print('Cannot find target (' + target + ') on medium (' + install_medium + ') check that your spelling is correct and that the target has been initialized on the medium')
         return -1
+    
+    # If target is initialized and target is this system, reinitialize to ensure we are up to date
+    init_action(None)
     
     # Prepare configuration file to redirect location of /etc/apt in apt-get
     redir_conf = open('redir_conf','w')
@@ -247,18 +247,18 @@ def install_action(args):
     parms = ['apt-get']
     
     # Set RootDir to installation medium location
-    parms.append('-o')
-    parms.append('RootDir=' + install_medium)
+    parms.append('--option')
+    parms.append('Dir=' + install_medium)
     
     # Load target's apt-medium.conf file 
-    parms.append('-c')
+    parms.append('--config-file')
     parms.append(os.path.join(target_apt_dir, 'apt-medium.conf'))
     
     parms.append('install')
     if packages:
         parms.extend(packages)
     else:
-        state = load_app_state()
+        state = load_medium_state()
         if len(state['install_queue'][target]) > 0:
             packages = state['install_queue'][target]
             parms.extend(packages)
@@ -266,17 +266,14 @@ def install_action(args):
             print('Nothing to install')
             return 0
     
-    # Check if all needed downloads are present and gather detailed output of operation
-    uris = None
+    parms.append('--assume-yes')
+    
+    # Check if all needed downloads are present
     try:
         check_parms = list(parms)
         check_parms.append('--print-uris')
         check_parms.append('-qq')
         uris = subprocess.check_output(check_parms)
-        
-        detail_parms = list(parms)
-        detail_parms.append('--simulate')
-        detail_output = subprocess.check_output(detail_parms).splitlines()
     except subprocess.CalledProcessError as _:
         print('apt-get failed while checking for needed packages')
         return -1
@@ -306,8 +303,11 @@ def install_action(args):
                 break
             elif response == 's':
                 print()
+                detail_parms = list(parms)
+                detail_parms.append('--simulate')
+                detail_output = subprocess.check_output(detail_parms).splitlines()
                 for line in detail_output:
-                    if re.search('Reading package lists', line) or re.search('Building dependency tree', line):
+                    if re.search('Reading package lists', line) or re.search('Building dependency tree', line) or re.search('Reading state information', line):
                         continue
                     print(line)
                     if re.search(r'[0-9]* newly installed', line):
@@ -327,6 +327,9 @@ def install_action(args):
         else: # response == 'n'
             pass
     else:
+        detail_parms = list(parms)
+        detail_parms.append('--simulate')
+        detail_output = subprocess.check_output(detail_parms).splitlines()
         at_sim_details = False
         nothing_to_do = True
         for line in detail_output:
@@ -351,7 +354,7 @@ def install_action(args):
                     elif response == 's':
                         print()
                         for line in detail_output:
-                            if re.search('Reading package lists', line) or re.search('Building dependency tree', line):
+                            if re.search('Reading package lists', line) or re.search('Building dependency tree', line) or re.search('Reading state information', line):
                                 continue
                             print(line)
                             if re.search(r'[0-9]* newly installed', line):
@@ -382,7 +385,7 @@ def install_action(args):
                     elif response == 's':
                         print()
                         for line in detail_output:
-                            if re.search('Reading package lists', line) or re.search('Building dependency tree', line):
+                            if re.search('Reading package lists', line) or re.search('Building dependency tree', line) or re.search('Reading state information', line):
                                 continue
                             print(line)
                             if re.search(r'[0-9]* newly installed', line):
@@ -391,13 +394,14 @@ def install_action(args):
                     else:
                         print('Invalid selection.')
                 if response == 'y':
-                    with subprocess.Popen(parms, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True) as proc:
-                        for line in p.stdout:
-                            print(line, end='')
+                    # Override archives parameter with absolute path since apt-get refuses to install from a relative path
+                    parms.append('--option')
+                    parms.append('Dir::Cache::archives=' + os.path.join(install_medium, 'archives'))
+                    proc = subprocess.Popen(parms)
                     
-                        if p.returncode != 0:
-                            print('apt-get failed while installing packages')
-                            return -1
+                    if proc.wait() != 0:
+                        print('apt-get failed while installing packages')
+                        return -1
                     
                     print ('Installation successful')
                     state = load_medium_state()
@@ -405,15 +409,156 @@ def install_action(args):
                         if package in state['install_queue'][target]:
                             state['install_queue'][target].remove(package)
                     save_medium_state(state)
+                    
+                    # Re-sync dpkg status info
+                    init_action(None)
                 else: # response == 'n'
                     pass
         else:
+            state = load_medium_state()
+            for package in packages:
+                if package in state['install_queue'][target]:
+                    state['install_queue'][target].remove(package)
+            save_medium_state(state)
             print('All packages already installed/up-to-date')
     
     return 0
 
 def download_action(args):
-    raise NotImplementedError()
+    install_medium = args.install_medium
+    
+    state = load_medium_state()
+    if args.target:
+        all_systems = False
+        target = args.target
+        if not os.path.exists(os.path.join(install_medium, 'system_info', target)) or target not in state['download_queue']:
+            print('Cannot find target (' + target + ') on medium (' + install_medium + ') check that your spelling is correct and that the target has been initialized on the medium')
+            return -1
+    else:
+        all_systems = True
+    
+    actions_to_perform = [] # [(hostname, action, additional params.), ...]
+    uris_to_download = set()
+    for system in (state['download_queue'] if all_systems else [target]):
+        if len(state['download_queue'][system]) > 0:
+            if not actions_to_perform:
+                print('Pending download actions:')
+            print('\t' + system + ':')
+            action = 'install'
+            addtnl_parms = state['download_queue'][system]
+            print('\t\t' + action + ' ' + ", ".join(addtnl_parms))
+            actions_to_perform.append((system, action, addtnl_parms))
+            
+            target_info_dir = os.path.join(install_medium, 'system_info', system)
+            target_apt_dir = os.path.join(target_info_dir, 'etc', 'apt')
+            # Check packages to be downloaded to calculate download size
+            # Prepare configuration file to redirect location of /etc/apt in apt-get
+            redir_conf = open('redir_conf','w')
+            redir_conf.write('Dir::Etc "' + target_apt_dir + '";')
+            redir_conf.close()
+            env = os.environ
+            env['APT_CONFIG'] = os.path.join(install_medium, 'redir_conf')
+            
+            parms = ['apt-get']
+            
+            # Set RootDir to installation medium location
+            parms.append('--option')
+            parms.append('Dir=' + install_medium)
+            
+            # Load target's apt-medium.conf file
+            parms.append('--config-file')
+            parms.append(os.path.join(target_apt_dir, 'apt-medium.conf'))
+            
+            parms.append('install')
+            if addtnl_parms:
+                parms.extend(addtnl_parms)
+            
+            try:
+                check_parms = list(parms)
+                check_parms.append('--print-uris')
+                check_parms.append('-qq')
+                uris = subprocess.check_output(check_parms)
+            except subprocess.CalledProcessError as _:
+                print('apt-get failed while checking for needed packages')
+                return -1
+            
+            missing_packages = uris.splitlines()
+            missing_packages = map(str.split, missing_packages)
+            missing_packages = map(tuple, missing_packages)
+            uris_to_download.update(missing_packages)
+    
+    if not actions_to_perform:
+        print('No pending download actions')
+        return 0
+    
+    # Remove any empty lines from uri set
+    try:
+        uris_to_download.remove(())
+    except KeyError as _:
+        pass
+    
+    total_size = 0
+    for item in uris_to_download:
+        total_size += int(item[2])
+    print('About to download ' + str(len(uris_to_download)) + ' packages totaling ' + '{:,}'.format(total_size) + ' bytes')
+    
+    while True:
+        print('Continue with download? Yes (y), No(n):', end='')
+        response = getch()
+        print(response)
+        response = response.lower()
+        if response == 'y' or response == 'n':
+            break
+        else:
+            print('Invalid selection.')
+    if response == 'n':
+        return 0
+    
+    success = True
+    for target, action, addtnl_params in actions_to_perform:
+        target_info_dir = os.path.join(install_medium, 'system_info', target)
+        target_apt_dir = os.path.join(target_info_dir, 'etc', 'apt')
+        
+        # Prepare configuration file to redirect location of /etc/apt in apt-get
+        redir_conf = open('redir_conf','w')
+        redir_conf.write('Dir::Etc "' + target_apt_dir + '";')
+        redir_conf.close()
+        env = os.environ
+        env['APT_CONFIG'] = os.path.join(install_medium, 'redir_conf')
+        
+        parms = ['apt-get']
+        
+        # Set RootDir to installation medium location
+        parms.append('--option')
+        parms.append('Dir=' + install_medium)
+        
+        # Load target's apt-medium.conf file
+        parms.append('--config-file')
+        parms.append(os.path.join(target_apt_dir, 'apt-medium.conf'))
+        
+        parms.append('--download-only')
+        parms.append('--assume-yes')
+        
+        parms.append(action)
+        if addtnl_params:
+            parms.extend(addtnl_params)
+        
+        proc = subprocess.Popen(parms)
+        
+        if proc.wait() != 0:
+            print('\napt-get failed while downloading packages for target: ' +  target + ' action: ' + action + ' addtnl_params: ' + " ".join(addtnl_params))
+            success = False
+        else:
+            state = load_medium_state()
+            for package in addtnl_params:
+                state['download_queue'][target].remove(package)
+                state['install_queue'][target].append(package)
+            save_medium_state(state)
+    
+    if success:
+        print('\nDownload completed successfully')
+    else:
+        print('\nOne or more download actions failed')
 
 if __name__ == '__main__':
     main()

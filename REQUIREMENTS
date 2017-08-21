@@ -1,9 +1,7 @@
 Dependencies of apt-medium:
 - apt-get
 - dpkg
-- rsync
 - python 2.7.x or 3.x
 
 Requirements of installation medium:
 - Must be writeable
-- Must support symlinks
