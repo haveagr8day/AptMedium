@@ -12,4 +12,4 @@ python:
   - "pypy3"
 sudo: required
 install: true
-script: python -m pytest
+script: sudo "PATH=$PATH" python -m pytest
