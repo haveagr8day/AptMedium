@@ -12,4 +12,4 @@ python:
   - "pypy3"
 sudo: required
 install: true
-script: sudo python -m pytest
+script: sudo py.test
