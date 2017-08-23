@@ -18,7 +18,7 @@
     Copyright (c) 2017 Riley Baxter
 """
 
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
 
 import argparse
 import distutils.spawn
@@ -27,8 +27,9 @@ import re
 import shutil
 import socket
 import subprocess
+import sys
 
-from utils import getch
+from .utils import getch
 
 try:
     import cPickle as pickle
@@ -43,7 +44,7 @@ def main():
     main_parser.add_argument('-m', '--install-medium', type=str, default=os.getcwd(), help='path to installation medium (defaults to current working directory)')
     
     # Create a parser for the init command
-    init_parser = sub_parsers.add_parser('init', help='initialize or update the dpkg status and apt configuration for this system in the installation medium')
+    sub_parsers.add_parser('init', help='initialize or update the dpkg status and apt configuration for this system in the installation medium')
     
     # Create a parser for the install command
     install_parser = sub_parsers.add_parser('install', help='install or upgrade a package (or queue the action if downloads are needed)')
@@ -91,7 +92,7 @@ def main():
         exit(-1)
     
     if args.action == 'init':
-        exitCode = init_action(args)
+        exitCode = init_action()
     elif args.action == 'install':
         exitCode = install_action(args)
     elif args.action == 'download':
@@ -106,11 +107,11 @@ def main():
 def sync_local_lists():
     medium_lists_dir = 'lists'
     local_lists_dir = '/var/lib/apt/lists'
-    for file in os.listdir(local_lists_dir):
-        src_file = os.path.join(local_lists_dir, file)
-        dst_file = os.path.join(medium_lists_dir, file)
+    for f in os.listdir(local_lists_dir):
+        src_file = os.path.join(local_lists_dir, f)
+        dst_file = os.path.join(medium_lists_dir, f)
         
-        if file == 'lock' or not os.path.isfile(src_file):
+        if f == 'lock' or not os.path.isfile(src_file):
             continue
         
         if not os.path.exists(dst_file) or os.path.getmtime(src_file) > os.path.getmtime(dst_file):
@@ -134,7 +135,7 @@ def save_medium_state(state):
 def validate_queues():
     raise NotImplementedError()
 
-def init_action(args):
+def init_action():
     hostname = socket.gethostname()
     
     info_dir = 'system_info'
@@ -186,8 +187,8 @@ def init_action(args):
     
     am_conf.write('APT\n')
     am_conf.write('    {\n')
-    am_conf.write('    Architecture "' + subprocess.check_output(['dpkg', '--print-architecture']).splitlines()[0] + '";\n');
-    foreign_archs = subprocess.check_output(['dpkg', '--print-foreign-architectures']).splitlines()
+    am_conf.write('    Architecture "' + subprocess.check_output(['dpkg', '--print-architecture']).splitlines()[0].decode('utf-8') + '";\n');
+    foreign_archs = subprocess.check_output(['dpkg', '--print-foreign-architectures']).decode('utf-8').splitlines()
     if len(foreign_archs) > 0:
         am_conf.write('    Architectures {')
         for arch in foreign_archs:
@@ -235,7 +236,7 @@ def install_action(args):
         return -1
     
     # If target is initialized and target is this system, reinitialize to ensure we are up to date
-    init_action(None)
+    init_action()
     
     # Prepare configuration file to redirect location of /etc/apt in apt-get
     redir_conf = open('redir_conf','w')
@@ -273,29 +274,24 @@ def install_action(args):
         check_parms = list(parms)
         check_parms.append('--print-uris')
         check_parms.append('-qq')
-        uris = subprocess.check_output(check_parms)
+        uris = subprocess.check_output(check_parms).decode('utf-8').splitlines()
     except subprocess.CalledProcessError as _:
         print('apt-get failed while checking for needed packages')
         return -1
     
-    missing_packages = uris.splitlines()
-    missing_packages = map(str.split, missing_packages)
-    
-    # Remove any empty lines
-    try:
-        while True:
-            missing_packages.remove([])
-    except ValueError as _:
-        pass
-    
     total_size = 0
-    for item in missing_packages:
+    num_missing = 0
+    for item in uris:
+        item = item.split()
+        if item == []: continue
         total_size += int(item[2])
+        num_missing += 1
     
-    if len(missing_packages) > 0:
-        print('Need to download ' + str(len(missing_packages)) + ' packages totaling ' + '{:,}'.format(total_size) + ' bytes')
+    if num_missing > 0:
+        print('Need to download ' + str(num_missing) + ' packages totaling ' + '{:,}'.format(total_size) + ' bytes')
         while True:
             print('Add to download queue? Yes (y), No(n), or Show Details (s):', end='')
+            sys.stdout.flush()
             response = getch()
             print(response)
             response = response.lower()
@@ -305,7 +301,7 @@ def install_action(args):
                 print()
                 detail_parms = list(parms)
                 detail_parms.append('--simulate')
-                detail_output = subprocess.check_output(detail_parms).splitlines()
+                detail_output = subprocess.check_output(detail_parms).decode('utf-8').splitlines()
                 for line in detail_output:
                     if re.search('Reading package lists', line) or re.search('Building dependency tree', line) or re.search('Reading state information', line):
                         continue
@@ -329,7 +325,7 @@ def install_action(args):
     else:
         detail_parms = list(parms)
         detail_parms.append('--simulate')
-        detail_output = subprocess.check_output(detail_parms).splitlines()
+        detail_output = subprocess.check_output(detail_parms).decode('utf-8').splitlines()
         at_sim_details = False
         nothing_to_do = True
         for line in detail_output:
@@ -346,6 +342,7 @@ def install_action(args):
                 print('Ready to install ' + ", ".join(packages) + ' on ' + target)
                 while True:
                     print('Add to install queue? Yes (y), No(n), or Show Details (s):', end='')
+                    sys.stdout.flush()
                     response = getch()
                     print(response)
                     response = response.lower()
@@ -377,6 +374,7 @@ def install_action(args):
                 print('Ready to install ' + ", ".join(packages))
                 while True:
                     print('Continue with install? Yes (y), No(n), or Show Details (s):', end='')
+                    sys.stdout.flush()
                     response = getch()
                     print(response)
                     response = response.lower()
@@ -411,7 +409,7 @@ def install_action(args):
                     save_medium_state(state)
                     
                     # Re-sync dpkg status info
-                    init_action(None)
+                    init_action()
                 else: # response == 'n'
                     pass
         else:
@@ -477,7 +475,7 @@ def download_action(args):
                 check_parms = list(parms)
                 check_parms.append('--print-uris')
                 check_parms.append('-qq')
-                uris = subprocess.check_output(check_parms)
+                uris = subprocess.check_output(check_parms).decode('utf-8')
             except subprocess.CalledProcessError as _:
                 print('apt-get failed while checking for needed packages')
                 return -1
@@ -504,6 +502,7 @@ def download_action(args):
     
     while True:
         print('Continue with download? Yes (y), No(n):', end='')
+        sys.stdout.flush()
         response = getch()
         print(response)
         response = response.lower()
