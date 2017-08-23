@@ -1,7 +1,7 @@
 from setuptools import setup
 
-setup(name='aptmedium',
-      version='1.0dev',
+setup(name='apt-medium',
+      version='1.0.dev0',
       description='Manages an APT installation medium for multiple, even disconnected or remote, machines.',
       long_description=open('README.txt').read(),
       url='http://github.com/haveagr8day/AptMedium',
@@ -9,11 +9,8 @@ setup(name='aptmedium',
       author_email='rbrileybaxter@gmail.com',
       license='GPLv2+',
       keywords='apt medium offline package manager',
-      packages=['aptmedium'],
+      packages=['apt_medium'],
       scripts = ['apt-medium'],
-      entry_points = {
-          'console_scripts' : ['apt-medium=aptmedium.aptmedium:main'],
-      },
       classifiers=[
           'Development Status :: 2 - Pre-Alpha',
           'Environment :: Console',
@@ -24,4 +21,5 @@ setup(name='aptmedium',
           'Topic :: System :: Installation/Setup',
           'Topic :: System :: Software Distribution',
           'Topic :: System :: Systems Administration',
-          'Topic :: Utilities'])
+          'Topic :: Utilities'],
+      zip_safe = True)
