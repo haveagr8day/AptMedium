@@ -29,7 +29,7 @@ import socket
 import subprocess
 import sys
 
-from .utils import getch
+from .utils import getch, native_to_unicode
 
 try:
     import cPickle as pickle
@@ -41,26 +41,26 @@ def main():
     sub_parsers = main_parser.add_subparsers(dest='action', metavar='action')
     sub_parsers.required = True
     
-    main_parser.add_argument('-m', '--install-medium', type=str, default=os.getcwd(), help='path to installation medium (defaults to current working directory)')
+    main_parser.add_argument('-m', '--install-medium', type=native_to_unicode, default=os.getcwd(), help='path to installation medium (defaults to current working directory)')
     
     # Create a parser for the init command
     sub_parsers.add_parser('init', help='initialize or update the dpkg status and apt configuration for this system in the installation medium')
     
     # Create a parser for the install command
     install_parser = sub_parsers.add_parser('install', help='install or upgrade a package (or queue the action if downloads are needed)')
-    install_parser.add_argument('-t', '--target', type=str, default=socket.gethostname(), help='the hostname of the target system to perform the install/upgrade on (defaults to the current system)')
-    install_parser.add_argument('packages', type=str, nargs='*', help='package name(s) to be installed')
+    install_parser.add_argument('-t', '--target', type=native_to_unicode, default=socket.gethostname(), help='the hostname of the target system to perform the install/upgrade on (defaults to the current system)')
+    install_parser.add_argument('packages', type=native_to_unicode, nargs='*', help='package name(s) to be installed')
     
     # Create a parser for the download command
     download_parser = sub_parsers.add_parser('download', help='download files/packages needed to complete pending actions')
-    download_parser.add_argument('-t', '--target', type=str, help='the system to complete pending downloads for (default is all systems)')
+    download_parser.add_argument('-t', '--target', type=native_to_unicode, help='the system to complete pending downloads for (default is all systems)')
     
     # TODO: Create a parser for the show-queue command
     
     # TODO: Create a parser for the clear-queue command 
     
     args = main_parser.parse_args()
-    
+    args.action = native_to_unicode(args.action)
     # Check if we are running as root
     if os.geteuid() != 0:
         print('apt-medium must be run as root')
@@ -481,7 +481,7 @@ def download_action(args):
                 return -1
             
             missing_packages = uris.splitlines()
-            missing_packages = map(str.split, missing_packages)
+            missing_packages = [ s.split() for s in missing_packages ]
             missing_packages = map(tuple, missing_packages)
             uris_to_download.update(missing_packages)
     

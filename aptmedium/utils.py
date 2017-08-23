@@ -32,3 +32,12 @@ def getch():
         termios.tcsetattr(stdin_fd, termios.TCSADRAIN, orig_settings)
     
     return ch
+
+try:
+    unicode
+except NameError:
+    def unicode(s, *_):
+        return s
+
+def native_to_unicode(s):
+    return unicode(s, "utf-8")
