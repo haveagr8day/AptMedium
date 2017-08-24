@@ -64,15 +64,15 @@ def main():
     # Check if we are running as root
     if os.geteuid() != 0:
         print('apt-medium must be run as root')
-        exit(-1)
+        return -1
     
     if not distutils.spawn.find_executable('apt-get'):
         print('Cannot find apt-get in PATH.')
-        exit(-1)
+        return -1
     
     if not distutils.spawn.find_executable('dpkg'):
         print('Cannot find dpkg in PATH.')
-        exit(-1)
+        return -1
     
     args.install_medium = os.path.abspath(args.install_medium)
     
@@ -80,7 +80,7 @@ def main():
         os.chdir(args.install_medium)
     else:
         print('The specified installation medium (' + args.install_medium + ') does not exist.')
-        exit(-1)
+        return -1
     
     try:
         f = open('testfile','w')
@@ -89,20 +89,20 @@ def main():
         os.unlink('testfile')
     except Exception as _:
         print('The specified installation medium (' + args.install_medium + ') does not appear to be writeable, read-only install mediums are not currently supported')
-        exit(-1)
+        return -1
     
     if args.action == 'init':
-        exitCode = init_action()
+        retCode = init_action()
     elif args.action == 'install':
-        exitCode = install_action(args)
+        retCode = install_action(args)
     elif args.action == 'download':
-        exitCode = download_action(args)
+        retCode = download_action(args)
     
     # Cleanup
     if os.path.exists('redir_conf'):
         os.unlink('redir_conf')
     
-    exit(exitCode)
+    return retCode
 
 def sync_local_lists():
     medium_lists_dir = 'lists'
@@ -120,7 +120,7 @@ def sync_local_lists():
 def load_medium_state():
     if not os.path.isfile('medium_state'):
         print('medium_state file not found on the installation medium (' + os.getcwd() + ')')
-        print('check you have specified the correct medium and that at least one system has been initialized on the medium')
+        print('Check you have specified the correct medium and that at least one system has been initialized on the medium')
         exit(-1)
     state_file = open('medium_state', 'rb')
     state = pickle.load(state_file)

@@ -8,10 +8,8 @@ import sys
 import tempfile
 
 def verify(dir):
-    with pytest.raises(SystemExit) as e:
-        main()
-    assert e.type == SystemExit
-    assert e.value.code == 0
+    retCode = main()
+    assert retCode == 0
     os.chdir(dir)
     hostname = socket.gethostname()
     assert os.path.isdir(os.path.join('archives', 'partial'))
