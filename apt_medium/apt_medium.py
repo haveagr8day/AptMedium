@@ -28,6 +28,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 
 from .utils import getch, native_to_unicode
 
@@ -35,6 +36,8 @@ try:
     import cPickle as pickle
 except ImportError as _:
     import pickle
+
+tempfiles = []
 
 def main():
     main_parser = argparse.ArgumentParser(description='Manages an installation medium for installing/updating packages on multiple (possibly disconnected and/or remote) systems.')
@@ -98,9 +101,9 @@ def main():
     elif args.action == 'download':
         retCode = download_action(args)
     
-    # Cleanup
-    if os.path.exists('redir_conf'):
-        os.unlink('redir_conf')
+    # Cleanup temporary files
+    for f in tempfiles:
+        f.close()
     
     return retCode
 
@@ -134,6 +137,13 @@ def save_medium_state(state):
     
 def validate_queues():
     raise NotImplementedError()
+
+def setup_config_redirect(env, config_location):
+    redir_conf = tempfile.NamedTemporaryFile()
+    tempfiles.append(redir_conf)
+    redir_conf.write('Dir::Etc "' + config_location + '";')
+    env['APT_CONFIG'] = redir_conf.name
+    return env
 
 def init_action():
     hostname = socket.gethostname()
@@ -239,11 +249,7 @@ def install_action(args):
     init_action()
     
     # Prepare configuration file to redirect location of /etc/apt in apt-get
-    redir_conf = open('redir_conf','w')
-    redir_conf.write('Dir::Etc "' + target_apt_dir + '";')
-    redir_conf.close()
-    env = os.environ
-    env['APT_CONFIG'] = os.path.join(install_medium, 'redir_conf')
+    env = setup_config_redirect(os.environ, target_apt_dir)
     
     parms = ['apt-get']
     
@@ -274,7 +280,7 @@ def install_action(args):
         check_parms = list(parms)
         check_parms.append('--print-uris')
         check_parms.append('-qq')
-        uris = subprocess.check_output(check_parms).decode('utf-8').splitlines()
+        uris = subprocess.check_output(check_parms, env=env).decode('utf-8').splitlines()
     except subprocess.CalledProcessError as _:
         print('apt-get failed while checking for needed packages')
         return -1
@@ -301,7 +307,7 @@ def install_action(args):
                 print()
                 detail_parms = list(parms)
                 detail_parms.append('--simulate')
-                detail_output = subprocess.check_output(detail_parms).decode('utf-8').splitlines()
+                detail_output = subprocess.check_output(detail_parms, env=env).decode('utf-8').splitlines()
                 for line in detail_output:
                     if re.search('Reading package lists', line) or re.search('Building dependency tree', line) or re.search('Reading state information', line):
                         continue
@@ -325,7 +331,7 @@ def install_action(args):
     else:
         detail_parms = list(parms)
         detail_parms.append('--simulate')
-        detail_output = subprocess.check_output(detail_parms).decode('utf-8').splitlines()
+        detail_output = subprocess.check_output(detail_parms, env=env).decode('utf-8').splitlines()
         at_sim_details = False
         nothing_to_do = True
         for line in detail_output:
@@ -395,7 +401,7 @@ def install_action(args):
                     # Override archives parameter with absolute path since apt-get refuses to install from a relative path
                     parms.append('--option')
                     parms.append('Dir::Cache::archives=' + os.path.join(install_medium, 'archives'))
-                    proc = subprocess.Popen(parms)
+                    proc = subprocess.Popen(parms, env=env)
                     
                     if proc.wait() != 0:
                         print('apt-get failed while installing packages')
@@ -451,11 +457,7 @@ def download_action(args):
             target_apt_dir = os.path.join(target_info_dir, 'etc', 'apt')
             # Check packages to be downloaded to calculate download size
             # Prepare configuration file to redirect location of /etc/apt in apt-get
-            redir_conf = open('redir_conf','w')
-            redir_conf.write('Dir::Etc "' + target_apt_dir + '";')
-            redir_conf.close()
-            env = os.environ
-            env['APT_CONFIG'] = os.path.join(install_medium, 'redir_conf')
+            env = setup_config_redirect(os.environ, target_apt_dir)
             
             parms = ['apt-get']
             
@@ -475,7 +477,7 @@ def download_action(args):
                 check_parms = list(parms)
                 check_parms.append('--print-uris')
                 check_parms.append('-qq')
-                uris = subprocess.check_output(check_parms).decode('utf-8')
+                uris = subprocess.check_output(check_parms, env=env).decode('utf-8')
             except subprocess.CalledProcessError as _:
                 print('apt-get failed while checking for needed packages')
                 return -1
@@ -519,11 +521,7 @@ def download_action(args):
         target_apt_dir = os.path.join(target_info_dir, 'etc', 'apt')
         
         # Prepare configuration file to redirect location of /etc/apt in apt-get
-        redir_conf = open('redir_conf','w')
-        redir_conf.write('Dir::Etc "' + target_apt_dir + '";')
-        redir_conf.close()
-        env = os.environ
-        env['APT_CONFIG'] = os.path.join(install_medium, 'redir_conf')
+        env = setup_config_redirect(os.environ, target_apt_dir)
         
         parms = ['apt-get']
         
@@ -542,7 +540,7 @@ def download_action(args):
         if addtnl_params:
             parms.extend(addtnl_params)
         
-        proc = subprocess.Popen(parms)
+        proc = subprocess.Popen(parms, env=env)
         
         if proc.wait() != 0:
             print('\napt-get failed while downloading packages for target: ' +  target + ' action: ' + action + ' addtnl_params: ' + " ".join(addtnl_params))
