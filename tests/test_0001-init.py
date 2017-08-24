@@ -1,4 +1,4 @@
-from aptmedium.aptmedium import main
+from apt_medium.apt_medium import main
 from argparse import Namespace
 import os
 import pytest
