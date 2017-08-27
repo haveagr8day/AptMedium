@@ -20,5 +20,5 @@
 from apt_medium import apt_medium
 
 if __name__ == '__main__':
-    apt_medium.main()
+    exit(apt_medium.main())
 

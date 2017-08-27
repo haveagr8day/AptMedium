@@ -40,6 +40,33 @@ except ImportError as _:
 tempfiles = []
 
 def main():
+    
+    try:
+        args = parse_args(sys.argv[1:])
+    except Exception as e:
+        print(e)
+        return 1
+    
+    try:
+        check_sysreqs()
+    except Exception as e:
+        print(e)
+        return 1
+    
+    if args.action == 'init':
+        retCode = init_action()
+    elif args.action == 'install':
+        retCode = install_action(args)
+    elif args.action == 'download':
+        retCode = download_action(args)
+    
+    # Cleanup temporary files
+    for f in tempfiles:
+        f.close()
+    
+    return retCode
+
+def parse_args(in_args):
     main_parser = argparse.ArgumentParser(description='Manages an installation medium for installing/updating packages on multiple (possibly disconnected and/or remote) systems.')
     sub_parsers = main_parser.add_subparsers(dest='action', metavar='action')
     sub_parsers.required = True
@@ -62,50 +89,35 @@ def main():
     
     # TODO: Create a parser for the clear-queue command 
     
-    args = main_parser.parse_args()
+    args = main_parser.parse_args(in_args)
     args.action = native_to_unicode(args.action)
-    # Check if we are running as root
-    if os.geteuid() != 0:
-        print('apt-medium must be run as root')
-        return -1
-    
-    if not distutils.spawn.find_executable('apt-get'):
-        print('Cannot find apt-get in PATH.')
-        return -1
-    
-    if not distutils.spawn.find_executable('dpkg'):
-        print('Cannot find dpkg in PATH.')
-        return -1
-    
     args.install_medium = os.path.abspath(args.install_medium)
     
     if os.path.isdir(args.install_medium):
         os.chdir(args.install_medium)
     else:
-        print('The specified installation medium (' + args.install_medium + ') does not exist.')
-        return -1
+        raise Exception('The specified installation medium (' + args.install_medium + ') does not exist.')
     
     try:
         f = open('testfile','w')
         f.write('test')
         f.close()
         os.unlink('testfile')
-    except Exception as _:
-        print('The specified installation medium (' + args.install_medium + ') does not appear to be writeable, read-only install mediums are not currently supported')
-        return -1
+    except (IOError,OSError) as _:
+        raise Exception('The specified installation medium (' + args.install_medium + ') does not appear to be writeable, read-only install mediums are not currently supported')
     
-    if args.action == 'init':
-        retCode = init_action()
-    elif args.action == 'install':
-        retCode = install_action(args)
-    elif args.action == 'download':
-        retCode = download_action(args)
+    return args
+
+def check_sysreqs():
+    # Check if we are running as root
+    if os.geteuid() != 0:
+        raise Exception('apt-medium must be run as root')
     
-    # Cleanup temporary files
-    for f in tempfiles:
-        f.close()
+    if not distutils.spawn.find_executable('apt-get'):
+        raise Exception('Cannot find apt-get in PATH.')
     
-    return retCode
+    if not distutils.spawn.find_executable('dpkg'):
+        raise Exception('Cannot find dpkg in PATH.')
 
 def sync_local_lists():
     medium_lists_dir = 'lists'
