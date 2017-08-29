@@ -55,6 +55,8 @@ def main():
     
     if args.action == 'init':
         retCode = init_action()
+    elif args.action == 'update':
+        retCode = update_action(args)
     elif args.action == 'install':
         retCode = install_action(args)
     elif args.action == 'download':
@@ -76,14 +78,18 @@ def parse_args(in_args):
     # Create a parser for the init command
     sub_parsers.add_parser('init', help='initialize or update the dpkg status and apt configuration for this system in the installation medium')
     
+    # Create a parser for the update command
+    update_parser = sub_parsers.add_parser('update', help='retrieve new lists of packages (network connectivity required)')
+    update_parser.add_argument('-t', '--target', metavar='hostname', type=native_to_unicode, help='the hostname of the system to update package lists for (default is all systems)')
+    
     # Create a parser for the install command
     install_parser = sub_parsers.add_parser('install', help='install or upgrade a package (or queue the action if downloads are needed)')
-    install_parser.add_argument('-t', '--target', type=native_to_unicode, default=socket.gethostname(), help='the hostname of the target system to perform the install/upgrade on (defaults to the current system)')
+    install_parser.add_argument('-t', '--target', metavar='hostname', type=native_to_unicode, default=socket.gethostname(), help='the hostname of the target system to perform the install/upgrade on (defaults to the current system)')
     install_parser.add_argument('packages', type=native_to_unicode, nargs='*', help='package name(s) to be installed')
     
     # Create a parser for the download command
-    download_parser = sub_parsers.add_parser('download', help='download files/packages needed to complete pending actions')
-    download_parser.add_argument('-t', '--target', type=native_to_unicode, help='the system to complete pending downloads for (default is all systems)')
+    download_parser = sub_parsers.add_parser('download', help='download files/packages needed to complete pending actions (network connectivity required)')
+    download_parser.add_argument('-t', '--target', metavar='hostname', type=native_to_unicode, help='the hostname of the system to complete pending downloads for (default is all systems)')
     
     # TODO: Create a parser for the show-queue command
     
@@ -241,6 +247,51 @@ def init_action():
         save_medium_state(state)
     
     return 0
+
+def update_action(args):
+    install_medium = args.install_medium
+    
+    state = load_medium_state()
+    if args.target:
+        all_systems = False
+        target = args.target
+        if not os.path.exists(os.path.join(install_medium, 'system_info', target)):
+            print('Cannot find target (' + target + ') on medium (' + install_medium + ') check that your spelling is correct and that the target has been initialized on the medium')
+            return -1
+    else:
+        all_systems = True
+    
+    success = True
+    for system in (state['download_queue'] if all_systems else [target]):
+        target_info_dir = os.path.join(install_medium, 'system_info', system)
+        target_apt_dir = os.path.join(target_info_dir, 'etc', 'apt')
+        # Prepare configuration file to redirect location of /etc/apt in apt-get
+        env = setup_config_redirect(os.environ, target_apt_dir)
+        
+        parms = ['apt-get']
+        
+        # Set RootDir to installation medium location
+        parms.append('--option')
+        parms.append('Dir=' + install_medium)
+        
+        # Load target's apt-medium.conf file
+        parms.append('--config-file')
+        parms.append(os.path.join(target_apt_dir, 'apt-medium.conf'))
+        
+        parms.append('update')
+        
+        proc = subprocess.Popen(parms, env=env)
+        
+        if proc.wait() != 0:
+            print('\napt-get failed while updating package lists for target: ' +  system)
+            success = False
+    
+    if success:
+        # Note that apt-get returns an exit code of 0 on download failures.
+        # TODO: Try to find a better way to handle this.
+        print('\nPackage list updating complete\nCheck the above output for any download warnings/errors')
+    else:
+        print('\nOne or more package list update actions failed')
 
 def install_action(args):
     target = args.target
