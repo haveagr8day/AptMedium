@@ -12,12 +12,12 @@ General Usage:
 
 * Depending on how up-to-date the package lists on your target system/installation medium are, you may wish to run "apt-medium update" from a system with internet connectivity at this point
 
-* If you want to install something on the machine you are logged-in to enter: "apt-medium install <package> [<package 2>...]", and if the necessary packages are already on the apt-medium they will get installed right away.
+* If you want to install something on the system you are currently on, run "apt-medium install <package> [<package 2>...]". If the necessary packages are already on the installation medium they will get installed right away, otherwise you will be notified of the packages that need to be downloaded.
    
-* If you want to have something installed on another machine use "apt-medium install --target <hostname> <package> [<package 2>...]", you will be notified whether any packages need to be downloaded.
+* If you want to have something installed on another system use "apt-medium install --target <hostname> <package> [<package 2>...]", you will be notified whether any packages need to be downloaded.
 
-* If some packages are missing on the installtion medium you are asked to add them to the download queue. You can then run "apt-medium download" to download any missing packages. You might want to do this at another machine with a (faster) Internet connection.
+* If some packages are missing on the installtion medium you are asked to add them to the download queue. You can then run "apt-medium download" to download any missing packages. You might want to do this at another system with a (faster) Internet connection.
 
-* After downloading you just run "apt-medium install" on your target machines, and what you have requested and downloaded for those machines will get installed.
+* After downloading, you just run "apt-medium install" on your target systems and the packages that have been fully downloaded and are marked for installation on that system will get installed.
 
 This application is in very early development. While the steps detailed above should function, some key functionality is still missing (e.g. easily upgrading all packages on a system).
