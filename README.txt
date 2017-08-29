@@ -2,7 +2,7 @@
                  installing/updating packages on multiple
                  (possibly disconnected and/or remote) systems.
 
-Note: All apt-medium commands must be run as root, and must either be run with your installion medium directory as the working directory or with the '-m' option flag followed by the path to your installation medium directory.
+Note: All apt-medium commands must be run as root, and must either be run with your installation medium directory as the working directory or with the '-m' option flag followed by the path to your installation medium directory.
 
 General Usage:
 
@@ -16,7 +16,7 @@ General Usage:
    
 * If you want to have something installed on another system use "apt-medium install --target <hostname> <package> [<package 2>...]", you will be notified whether any packages need to be downloaded.
 
-* If some packages are missing on the installtion medium you are asked to add them to the download queue. You can then run "apt-medium download" to download any missing packages. You might want to do this at another system with a (faster) Internet connection.
+* If some packages are missing on the installation medium you are asked to add them to the download queue. You can then run "apt-medium download" to download any missing packages. You might want to do this at another system with a (faster) Internet connection.
 
 * After downloading, you just run "apt-medium install" on your target systems and the packages that have been fully downloaded and are marked for installation on that system will get installed.
 
