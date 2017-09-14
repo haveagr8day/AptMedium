@@ -121,7 +121,10 @@ def check_sysreqs():
     # Check if we are running as root
     if os.geteuid() != 0:
         # If not, restart ourselves as root
-        os.execvp("sudo", ["sudo"] + sys.argv)
+        if distutils.spawn.find_executable('sudo'):
+            os.execvp("sudo", ["sudo"] + sys.argv)
+        else:
+            raise Exception('apt-medium must be run as root, and sudo cannot be found in PATH.')
     
     if not distutils.spawn.find_executable('apt-get'):
         raise Exception('Cannot find apt-get in PATH.')
