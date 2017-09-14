@@ -120,7 +120,8 @@ def process_args(args):
 def check_sysreqs():
     # Check if we are running as root
     if os.geteuid() != 0:
-        raise Exception('apt-medium must be run as root')
+        # If not, restart ourselves as root
+        os.execvp("sudo", ["sudo"] + sys.argv)
     
     if not distutils.spawn.find_executable('apt-get'):
         raise Exception('Cannot find apt-get in PATH.')
