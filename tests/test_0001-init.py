@@ -1,4 +1,4 @@
-from apt_medium.apt_medium import main
+from apt_medium.apt_medium import parse_args, process_args
 from argparse import Namespace
 import os
 import pytest
@@ -7,8 +7,9 @@ import socket
 import sys
 import tempfile
 
-def verify(dir):
-    retCode = main()
+def verify(dir,in_args):
+    parsed_args = parse_args(in_args)
+    retCode = process_args(parsed_args)
     assert retCode == 0
     os.chdir(dir)
     hostname = socket.gethostname()
@@ -24,25 +25,19 @@ def verify(dir):
 def test_init_cwd():
     tempdir = tempfile.mkdtemp()
     os.chdir(tempdir)
-    sys.argv.append('init')
+    args = ['init']
     try:
-        verify(tempdir)
+        verify(tempdir, args)
     finally:
         shutil.rmtree(tempdir)
-        sys.argv.pop()
 
 def test_init_non_cwd():
     cwd = tempfile.mkdtemp()
     os.chdir(cwd)
     tempdir = tempfile.mkdtemp()
-    sys.argv.append('-m')
-    sys.argv.append(tempdir)
-    sys.argv.append('init')
+    args = ['-m', tempdir, 'init']
     try:
-        verify(tempdir)
+        verify(tempdir, args)
     finally:
         shutil.rmtree(tempdir)
         shutil.rmtree(cwd)
-        sys.argv.pop()
-        sys.argv.pop()
-        sys.argv.pop()

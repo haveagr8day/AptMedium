@@ -52,22 +52,9 @@ def main():
     except Exception as e:
         print(e)
         return 1
-    
-    if args.action == 'init':
-        retCode = init_action()
-    elif args.action == 'update':
-        retCode = update_action(args)
-    elif args.action == 'install':
-        retCode = install_action(args)
-    elif args.action == 'download':
-        retCode = download_action(args)
-    
-    # Cleanup temporary files
-    for f in tempfiles:
-        f.close()
-    
-    return retCode
-
+   
+    return process_args(args)
+ 
 def parse_args(in_args):
     main_parser = argparse.ArgumentParser(description='Manages an installation medium for installing/updating packages on multiple (possibly disconnected and/or remote) systems.')
     sub_parsers = main_parser.add_subparsers(dest='action', metavar='action')
@@ -113,6 +100,22 @@ def parse_args(in_args):
         raise Exception('The specified installation medium (' + args.install_medium + ') does not appear to be writeable, read-only install mediums are not currently supported')
     
     return args
+
+def process_args(args):
+    if args.action == 'init':
+        retCode = init_action()
+    elif args.action == 'update':
+        retCode = update_action(args)
+    elif args.action == 'install':
+        retCode = install_action(args)
+    elif args.action == 'download':
+        retCode = download_action(args)
+    
+    # Cleanup temporary files
+    for f in tempfiles:
+        f.close()
+    
+    return retCode
 
 def check_sysreqs():
     # Check if we are running as root
