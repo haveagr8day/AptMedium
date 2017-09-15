@@ -13,5 +13,5 @@ python:
 sudo: required
 install: pip install pytest
 script: 
-pyloc=$(which python)
-sudo $pyloc -m pytest
+  - pyloc=$(which python)
+  - sudo $pyloc -m pytest
