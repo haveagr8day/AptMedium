@@ -1,16 +1,22 @@
 language: python
 python:
-  - "2.7"
-  - "3.2"
-  - "3.3"
-  - "3.4"
-  - "3.5"
-  - "3.6"
-  - "nightly"
-  - "pypy"
-  - "pypy3"
+- '2.7'
+- '3.2'
+- '3.3'
+- '3.4'
+- '3.5'
+- '3.6'
+- nightly
+- pypy
+- pypy3
 sudo: required
 install: pip install pytest
-script: 
-  - pyloc=$(which python)
-  - sudo $pyloc -m pytest
+script:
+- pyloc=$(which python)
+- sudo $pyloc -m pytest
+notifications:
+  slack:
+    secure: iCe/Q+EH1gZa3Ym4R2HalBGLEmVZnDu9feAe+UtahI+nWewYU0Ti//lrnCylRTf56FNV6EoRz693IjQXM0XjPpb+Pz/wgymSnySt55XQk2MEBF4kenJC3RqL/S6Zbpf+LVFB0F5n2GZIayEo57WHUmFZb+ocWMlc7Eae3OYV3d/DiSywnNkBXa+n4VEc9wP5ssbDu8XuDZEmLMxvzocfJwP6Q18B+vsYORweYnpLiT4WJhyb0t12+QeyFr7heTp8fiPSM7ADUR4QHXukaF/yXkNe6L67wqDJwZGEB+9Vih1CUdjB3dv/XFBcBLzoHZ0cT6TMCEqT49MOOqoh5Sy4KGAItYh/8KR7Kb6Anqujrgy9nTblTWneCEdxzuTvljFZr2my3npXLfhwgUz1kWz1+iK0QMfZ28U7rSoENFNgFyAhs6VJr3poK/e6HSAaDTDa7tAxPCj2QC0cOqdYnr61JuFNscFFBpTEBqs0bf4a2Ze8KDNexeBBvaVcRogW2CIKmr1PCnBIjNi+Nc2iHvC1ykm88GDlo1NytsnCYo4RaehlMQKDU+lTBCaEKQbNiBpTvSYDEFl48aFQWYoUlFmMFHF+PIerQ5QIAgBHzAescurNej6yTfcviJRH2a8hobDDNeT+ZO4pS/OzlWunmQAgYihJ0nZwL0hwH6MeZ4KJXqk=i
+    on_success: always
+    on_failure: always
+  email: false
