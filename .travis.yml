@@ -1,5 +1,4 @@
 language: python
-
 python:
 - '2.7'
 - '3.2'
@@ -17,7 +16,8 @@ script:
 - sudo $pyloc -m pytest
 notifications:
   slack:
-    secure: OuuwJ9+LpyneMNfdBt+sdNaSyfxMTX9cTOvMPtBqZXYM/9ae5dvP6OzZE9F6pGwnL9hmBA/mLo0HzODFjw3Ofw5IFfwGyvH9EXzUN9FaY/3G08N/uP1wHwKeKSBiE9FJMm7y2vm3fqpQJJgtw3Fmfs7855pKW0d4m60kxLVsjojAmBGodlnAcpP9fapfB+iIPvuk+9L2Tw6LFU+75U7o8uSZidfBGbLSEf+054WfjIq8dMycQTmOK3byRA0gSmkHBD7FWYD4kCdCNRvs1xxBQtvVeKux79/glqi4MztYTpVwgZB5wtlxTRharrhPu81+6v9sKGUrR8lJLDjs3HUph9dL8W8n+lrQmbEDgSMQwgiPu/j+9+Yflzqql6ZbYe9dgre23WmFZGS7qYl6Aydgj89rKzW2TXptxUyiY/YxrYvFtsVZ4lZSauuChCfAZ52t+2BA/3x0jMrqP5HGfFk67vGJpcti2oVK/ZsBs9sF9sLg0bnT/lopoz980kvWqES9qSKVflF2jMiHS7SxgTIml66cuUXMtUpFqtDvKPtDZFxvZC5fIG5c4yTlurL4mnu0E7iQd5GRkaciyZ+u6vxgqjC+0MlnU88xnflltXnwRIhnqR/fEbA+f8FajixSV5trMek4iKwWsOjNAnoZ+sePb2+WhBCwoUCPC3YJw/+e6wQ=
     on_success: always
     on_failure: always
+    rooms:
+      secure: RYpOmeLO110o/RUzzh92TSiy06HM7I1Iuw223N1sBDBfOrE9awiDxqdB4uuk+aK4u5Wd2OTHoxbMVG/gA9Q0DrA5gkmldQHijWUzPuSPTcrs1D8n8njIlhhDcpgbK4gC9XYQPZ6Vvw1rfE4y4wx30+URiJBhP2fFhtNyidNG8OPIbNXWBFVKn2rz2a5bdKYDmr7hsj5z1Jzm45Uyo5pY/Gpfgxg0nMQkG7PT5fJPRmaJgxEiwkfg5qEFcrokIVCgFV6pKAIah++BC5WK1biYY5OwYTWw7Elh51j4sNqxc0NcALiVD35uPDhfYmpCsi0+gs+T/O9IknwKI+WOXX4J1cjd84Z430bcm5mpJlXI2nmmb4plYRn1FTdknZfPzGQ0iOpL0cJoufymC+iBeKtAGlV0tNuLSpgCD8tqCz7xKrhmf/aAZxCtBTSu+Fs8kiICCBzffEXOGscHSA+PCXNS2YAkgJ8tzCqhC+U+yWkLr2Tm5fTHa6xk7S0/Ace8vUeQT2+MCV9HCyMCqwFhGPvUr2NX8W60T5ZGW6JtL9bO5Oh5REsCKCiRtm/PofFpVoqzcCOsSl9JP2tNxUW3u1OSvfl/TpAtzTU+QObjYY0TuHCh2tyAgFx500gYtpfDllzxt2aofaeGr2sy45sTTk7C4gTr4no1SjilYFnT79gqiwI=
   email: false
