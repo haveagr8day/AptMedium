@@ -4,7 +4,7 @@
 Manages an installation medium for installing/updating packages on multiple (possibly disconnected and/or remote) systems.
 
 # General Usage
-Note: All apt-medium commands must be run as root, and must either be run with your installation medium directory as the working directory or with the '-m' option flag followed by the path to your installation medium directory.
+Note: All apt-medium commands must be run as root (if present, sudo will automatically be invoked to elevate permissions as needed), and must either be run with your installation medium directory as the working directory or with the '-m' option flag followed by the path to your installation medium directory.
 
 * You mount your apt-medium installation medium directory. (i.e. plug in your USB-disk etc.)
 
