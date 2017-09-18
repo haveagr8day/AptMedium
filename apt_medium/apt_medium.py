@@ -72,13 +72,13 @@ def parse_args(in_args):
     # Create a parser for the install command
     install_parser = sub_parsers.add_parser('install', help='install or upgrade a package (or queue the action if downloads are needed)')
     install_parser.add_argument('-t', '--target', metavar='hostname', type=native_to_unicode, default=socket.gethostname(), help='the hostname of the target system to perform the install/upgrade on (defaults to the current system)')
-    install_parser.add_argument('-f', '--force', help='force apt-get to proceed (--force-yes) even if a dangerous situation is detected')
+    install_parser.add_argument('-f', '--force', action='store_true', help='force apt-get to proceed (--force-yes) even if a dangerous situation is detected')
     install_parser.add_argument('packages', type=native_to_unicode, nargs='*', help='package name(s) to be installed')
     
     # Create a parser for the download command
     download_parser = sub_parsers.add_parser('download', help='download files/packages needed to complete pending actions (network connectivity required)')
     download_parser.add_argument('-t', '--target', metavar='hostname', type=native_to_unicode, help='the hostname of the system to complete pending downloads for (default is all systems)')
-    download_parser.add_argument('-f', '--force', help='force apt-get to proceed (--force-yes) even if a dangerous situation is detected')
+    download_parser.add_argument('-f', '--force', action='store_true', help='force apt-get to proceed (--force-yes) even if a dangerous situation is detected')
     
     # TODO: Create a parser for the show-queue command
     
