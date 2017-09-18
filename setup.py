@@ -3,7 +3,7 @@ from setuptools import setup
 setup(name='apt-medium',
       version='1.0.dev1',
       description='Manages an installation medium for installing/updating packages on multiple (possibly disconnected and/or remote) systems.',
-      long_description=open('README.txt').read(),
+      long_description=open('README.md').read(),
       url='http://github.com/haveagr8day/AptMedium',
       author='Riley Baxter',
       author_email='rbrileybaxter@gmail.com',
