@@ -10,7 +10,10 @@ python:
 - pypy
 - pypy3
 sudo: required
-install: pip install pytest
+install:
+- pip install pytest
+- pyloc=$(which python)
+- sudo $pyloc setup.py install
 script:
 - pyloc=$(which python)
 - sudo $pyloc -m pytest
