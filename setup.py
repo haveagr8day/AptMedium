@@ -11,8 +11,6 @@ setup(name='apt-medium',
       keywords='apt medium offline package manager',
       packages=['apt_medium'],
       scripts = ['apt-medium'],
-      setup_requires=['pytest-runner'],
-      tests_require=['pytest'],
       classifiers=[
           'Development Status :: 2 - Pre-Alpha',
           'Environment :: Console',
