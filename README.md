@@ -1,10 +1,19 @@
-[![Build Status](https://travis-ci.org/haveagr8day/AptMedium.svg?branch=master)](https://travis-ci.org/haveagr8day/AptMedium)
-
 # apt-medium
 Manages an installation medium for installing/updating packages on multiple (possibly disconnected and/or remote) systems.
 
-# General Usage
-Note: All apt-medium commands must be run as root (if present, sudo will automatically be invoked to elevate permissions as needed), and must either be run with your installation medium directory as the working directory or with the '-m' option flag followed by the path to your installation medium directory.
+This application is in very early development. While the steps detailed above should function, some key functionality is still missing (e.g. easily upgrading all packages on a system).
+## Requirements
+### Dependencies
+- apt-get
+- dpkg
+- python 2.7.x or 3.x
+### Installation Medium
+- Must be writable
+### Permissions
+- All apt-medium commands must be run as root (if present, sudo will automatically be invoked to elevate permissions as needed)
+
+## General Usage
+Note: apt-medium must either be run with your installation medium directory as the working directory or with the '-m' option flag followed by the path to your installation medium directory.
 
 * You mount your apt-medium installation medium directory. (i.e. plug in your USB-disk etc.)
 
@@ -20,4 +29,8 @@ Note: All apt-medium commands must be run as root (if present, sudo will automat
 
 * After downloading, you just run "apt-medium install" on your target systems and the packages that have been fully downloaded and are marked for installation on that system will get installed.
 
-This application is in very early development. While the steps detailed above should function, some key functionality is still missing (e.g. easily upgrading all packages on a system).
+## Automated Testing Status
+[![Build Status](https://travis-ci.org/haveagr8day/AptMedium.svg?branch=master)](https://travis-ci.org/haveagr8day/AptMedium)
+
+## License
+apt-medium is released under the [GPL version 2](https://opensource.org/licenses/GPL-2.0) or (at your option) any later version.

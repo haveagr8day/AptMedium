@@ -1,7 +1,0 @@
-Dependencies of apt-medium:
-- apt-get
-- dpkg
-- python 2.7.x or 3.x
-
-Requirements of installation medium:
-- Must be writeable
