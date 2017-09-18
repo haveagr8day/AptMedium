@@ -72,11 +72,13 @@ def parse_args(in_args):
     # Create a parser for the install command
     install_parser = sub_parsers.add_parser('install', help='install or upgrade a package (or queue the action if downloads are needed)')
     install_parser.add_argument('-t', '--target', metavar='hostname', type=native_to_unicode, default=socket.gethostname(), help='the hostname of the target system to perform the install/upgrade on (defaults to the current system)')
+    install_parser.add_argument('-f', '--force', help='force apt-get to proceed (--force-yes) even if a dangerous situation is detected')
     install_parser.add_argument('packages', type=native_to_unicode, nargs='*', help='package name(s) to be installed')
     
     # Create a parser for the download command
     download_parser = sub_parsers.add_parser('download', help='download files/packages needed to complete pending actions (network connectivity required)')
     download_parser.add_argument('-t', '--target', metavar='hostname', type=native_to_unicode, help='the hostname of the system to complete pending downloads for (default is all systems)')
+    download_parser.add_argument('-f', '--force', help='force apt-get to proceed (--force-yes) even if a dangerous situation is detected')
     
     # TODO: Create a parser for the show-queue command
     
@@ -257,11 +259,11 @@ def init_action():
 
 def update_action(args):
     install_medium = args.install_medium
+    target = args.target
     
     state = load_medium_state()
-    if args.target:
+    if target:
         all_systems = False
-        target = args.target
         if not os.path.exists(os.path.join(install_medium, 'system_info', target)):
             print('Cannot find target (' + target + ') on medium (' + install_medium + ') check that your spelling is correct and that the target has been initialized on the medium')
             return -1
@@ -304,6 +306,7 @@ def install_action(args):
     target = args.target
     install_medium = args.install_medium
     packages = args.packages
+    force = args.force
     local_is_target = target == socket.gethostname()
     
     target_info_dir = os.path.join(install_medium, 'system_info', target)
@@ -343,7 +346,10 @@ def install_action(args):
             print('Nothing to install')
             return 0
     
-    parms.append('--assume-yes')
+    if force:
+        parms.append('--force-yes')
+    else:
+        parms.append('--assume-yes')
     
     # Check if all needed downloads are present
     try:
@@ -500,11 +506,11 @@ def install_action(args):
 
 def download_action(args):
     install_medium = args.install_medium
+    target = args.target
     
     state = load_medium_state()
-    if args.target:
+    if target:
         all_systems = False
-        target = args.target
         if not os.path.exists(os.path.join(install_medium, 'system_info', target)) or target not in state['download_queue']:
             print('Cannot find target (' + target + ') on medium (' + install_medium + ') check that your spelling is correct and that the target has been initialized on the medium')
             return -1
@@ -604,7 +610,11 @@ def download_action(args):
         parms.append(os.path.join(target_apt_dir, 'apt-medium.conf'))
         
         parms.append('--download-only')
-        parms.append('--assume-yes')
+        
+        if force:
+            parms.append('--force-yes')
+        else:
+            parms.append('--assume-yes')
         
         parms.append(action)
         if addtnl_params:
