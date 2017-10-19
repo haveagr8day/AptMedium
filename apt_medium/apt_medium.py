@@ -40,6 +40,8 @@ except ImportError as _:
 tempfiles = []
 
 def main():
+    # Replace sys.argv[0] with absolute path to allow easy reinvokation even if cwd has changed
+    sys.argv[0] = os.path.abspath(sys.argv[0])
     
     try:
         args = parse_args(sys.argv[1:])
