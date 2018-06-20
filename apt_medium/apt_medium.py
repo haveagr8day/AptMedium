@@ -71,6 +71,16 @@ def parse_args(in_args):
     update_parser = sub_parsers.add_parser('update', help='retrieve new lists of packages (network connectivity required)')
     update_parser.add_argument('-t', '--target', metavar='hostname', type=native_to_unicode, help='the hostname of the system to update package lists for (default is all systems)')
     
+    # Create a parser for the upgrade command
+    upgrade_parser = sub_parsers.add_parser('upgrade', help='update all currently installed packages to latest versions (based on current package lists, may need to use "update" first to achieve desired effect)')
+    upgrade_parser.add_argument('--force', action='store_true', help='force apt-get to proceed (--force-yes) even if a dangerous situation is detected')
+    upgrade_parser.add_argument('-t', '--target', metavar='hostname', type=native_to_unicode, default=socket.gethostname(), help='the hostname of the target system to perform the upgrades on (defaults to the current system)')
+  
+    # Create a parser for the dist-upgrade command
+    dist_upgrade_parser = sub_parsers.add_parser('dist-upgrade', help='update all currently installed packages (including adding or removing packages as needed to resolve dependencies) (based on current package lists, may need to use "update" first to achieve desired effect)')
+    dist_upgrade_parser.add_argument('--force', action='store_true', help='force apt-get to proceed (--force-yes) even if a dangerous situation is detected')
+    dist_upgrade_parser.add_argument('-t', '--target', metavar='hostname', type=native_to_unicode, default=socket.gethostname(), help='the hostname of the target system to perform the upgrades on (defaults to the current system)')
+    
     # Create a parser for the install command
     install_parser = sub_parsers.add_parser('install', help='install or upgrade a package (or queue the action if downloads are needed)')
     install_parser.add_argument('-t', '--target', metavar='hostname', type=native_to_unicode, default=socket.gethostname(), help='the hostname of the target system to perform the install/upgrade on (defaults to the current system)')
@@ -112,6 +122,10 @@ def process_args(args):
         retCode = init_action()
     elif args.action == 'update':
         retCode = update_action(args)
+    elif args.action == 'upgrade':
+        retCode = upgrade_action(args, isDistUpgrade=False)
+    elif args.action == 'dist-upgrade':
+        retCode = upgrade_action(args, isDistUpgrade=True)
     elif args.action == 'install':
         retCode = install_action(args)
     elif args.action == 'download':
@@ -306,6 +320,241 @@ def update_action(args):
     else:
         print('\nOne or more package list update actions failed')
 
+def upgrade_action(args, isDistUpgrade):
+    target = args.target
+    install_medium = args.install_medium
+    force = args.force
+    
+    local_is_target = target == socket.gethostname()
+    
+    target_info_dir = os.path.join(install_medium, 'system_info', target)
+    target_apt_dir = os.path.join(target_info_dir, 'etc', 'apt')
+    
+    state = load_medium_state()
+    
+    # Verify upgrade target has been initialized
+    if not os.path.exists(target_info_dir) or target not in state['install_queue']:
+        print('Cannot find target (' + target + ') on medium (' + install_medium + ') check that your spelling is correct and that the target has been initialized on the medium')
+        return -1
+    
+    # If target is initialized and target is this system, reinitialize to ensure we are up to date
+    if local_is_target:
+        init_action()
+    
+    # Prepare configuration file to redirect location of /etc/apt in apt-get
+    env = setup_config_redirect(os.environ, target_apt_dir)
+    
+    parms = ['apt-get']
+    
+    # Set RootDir to installation medium location
+    parms.append('--option')
+    parms.append('Dir=' + install_medium)
+    
+    # Load target's apt-medium.conf file 
+    parms.append('--config-file')
+    parms.append(os.path.join(target_apt_dir, 'apt-medium.conf'))
+
+    if isDistUpgrade:
+        parms.append('dist-upgrade')
+    else:
+        parms.append('upgrade')
+    
+    if force:
+        parms.append('--force-yes')
+    else:
+        parms.append('--assume-yes')
+    
+    # Check if all needed downloads are present
+    try:
+        check_parms = list(parms)
+        check_parms.append('--print-uris')
+        check_parms.append('-qq')
+        uris = subprocess.check_output(check_parms, env=env).decode('utf-8').splitlines()
+    except subprocess.CalledProcessError as _:
+        print('apt-get failed while checking for needed packages')
+        return -1
+    
+    total_size = 0
+    num_missing = 0
+    for item in uris:
+        item = item.split()
+        if item == []: continue
+        total_size += int(item[2])
+        num_missing += 1
+
+    if num_missing > 0:
+        print('Need to download ' + str(num_missing) + ' packages totaling ' + '{:,}'.format(total_size) + ' bytes')
+        while True:
+            print('Add to download queue? Yes (y), No(n), or Show Details (s) or Print URIs (p):', end='')
+            sys.stdout.flush()
+            response = getch()
+            print(response)
+            response = response.lower()
+            if response == 'y' or response == 'n':
+                break
+            elif response == 's':
+                print()
+                detail_parms = list(parms)
+                detail_parms.append('--simulate')
+                detail_output = subprocess.check_output(detail_parms, env=env).decode('utf-8').splitlines()
+                for line in detail_output:
+                    if re.search('Reading package lists', line) or re.search('Building dependency tree', line) or re.search('Reading state information', line):
+                        continue
+                    print(line)
+                    if re.search(r'[0-9]* newly installed', line):
+                        break
+                print()
+            elif response == 'p':
+                print()
+                for item in uris:
+                    print(item)
+                print()
+            else:
+                print('Invalid selection.')
+        if response == 'y':
+            state = load_medium_state()
+            
+            # Parse packages to be upgraded from details and queue as a standard download for installation
+            detail_parms = list(parms)
+            detail_parms.append('--simulate')
+            detail_output = subprocess.check_output(detail_parms, env=env).decode('utf-8').splitlines()
+            
+            get_pkgs = False
+            packages = []
+            for line in detail_output:
+                if re.search('NEW packages will be installed', line) or re.search('packages will be upgraded', line):
+                    get_pkgs = True
+                    continue
+                if re.search('packages will be REMOVED', line) or re.search('have been kept back', line):
+                    get_pkgs = False
+                    continue
+                if re.search(r'[0-9]* newly installed', line):
+                    break
+                if get_pkgs:
+                    for pkg in line.split():
+                        packages.append(pkg)
+            
+            for package in packages:
+                if package not in state['download_queue'][target]:
+                    state['download_queue'][target].append(package)
+                    print('Queued ' + package + ' for download')
+                else:
+                    print(package + ' already queued for download')
+            save_medium_state(state)
+        else: # response == 'n'
+            pass
+    else:
+        detail_parms = list(parms)
+        detail_parms.append('--simulate')
+        detail_output = subprocess.check_output(detail_parms, env=env).decode('utf-8').splitlines()
+        at_sim_details = False
+        nothing_to_do = True
+        get_pkgs = False
+        packages = []
+        for line in detail_output:
+            if not at_sim_details:
+                if re.search('NEW packages will be installed', line) or re.search('packages will be upgraded', line):
+                    get_pkgs = True
+                    continue
+                if re.search('packages will be REMOVED', line) or re.search('have been kept back', line):
+                    get_pkgs = False
+                    continue
+                if re.search('is already the newest version', line):
+                    print(line)
+                if re.search(r'[0-9]* newly installed', line):
+                    at_sim_details = True
+                    continue
+                if get_pkgs:
+                    for pkg in line.split():
+                        packages.append(pkg)
+            else:
+                nothing_to_do = False
+                break
+        if not nothing_to_do:
+            if not local_is_target:
+                print('Ready to upgrade ' + ", ".join(packages) + ' on ' + target)
+                while True:
+                    print('Add to install queue? Yes (y), No(n), or Show Details (s):', end='')
+                    sys.stdout.flush()
+                    response = getch()
+                    print(response)
+                    response = response.lower()
+                    if response == 'y' or response == 'n':
+                        break
+                    elif response == 's':
+                        print()
+                        for line in detail_output:
+                            if re.search('Reading package lists', line) or re.search('Building dependency tree', line) or re.search('Reading state information', line):
+                                continue
+                            print(line)
+                            if re.search(r'[0-9]* newly installed', line):
+                                break
+                        print()
+                    else:
+                        print('Invalid selection.')
+                if response == 'y':
+                    state = load_medium_state()
+                    for package in packages:
+                        if package not in state['install_queue'][target]:
+                            state['install_queue'][target].append(package)
+                            print('Queued ' + package + ' for install')
+                        else:
+                            print(package + ' already queued for install')
+                    save_medium_state(state)
+                else: # response == 'n'
+                    pass
+            else:
+                print('Ready to upgrade ' + ", ".join(packages))
+                while True:
+                    print('Continue with upgrade? Yes (y), No(n), or Show Details (s):', end='')
+                    sys.stdout.flush()
+                    response = getch()
+                    print(response)
+                    response = response.lower()
+                    if response == 'y' or response == 'n':
+                        break
+                    elif response == 's':
+                        print()
+                        for line in detail_output:
+                            if re.search('Reading package lists', line) or re.search('Building dependency tree', line) or re.search('Reading state information', line):
+                                continue
+                            print(line)
+                            if re.search(r'[0-9]* newly installed', line):
+                                break
+                        print()
+                    else:
+                        print('Invalid selection.')
+                if response == 'y':
+                    # Override archives parameter with absolute path since apt-get refuses to install from a relative path
+                    parms.append('--option')
+                    parms.append('Dir::Cache::archives=' + os.path.join(install_medium, 'archives'))
+                    proc = subprocess.Popen(parms, env=env)
+                    
+                    if proc.wait() != 0:
+                        print('apt-get failed while installing packages')
+                        return -1
+                    
+                    print ('Installation successful')
+                    state = load_medium_state()
+                    for package in packages:
+                        if package in state['install_queue'][target]:
+                            state['install_queue'][target].remove(package)
+                    save_medium_state(state)
+                    
+                    # Re-sync dpkg status info
+                    init_action()
+                else: # response == 'n'
+                    pass
+        else:
+            state = load_medium_state()
+            for package in packages:
+                if package in state['install_queue'][target]:
+                    state['install_queue'][target].remove(package)
+            save_medium_state(state)
+            print('All packages already installed/up-to-date')
+    
+    return 0
+    
 def install_action(args):
     target = args.target
     install_medium = args.install_medium
