@@ -74,13 +74,15 @@ def parse_args(in_args):
     # Create a parser for the install command
     install_parser = sub_parsers.add_parser('install', help='install or upgrade a package (or queue the action if downloads are needed)')
     install_parser.add_argument('-t', '--target', metavar='hostname', type=native_to_unicode, default=socket.gethostname(), help='the hostname of the target system to perform the install/upgrade on (defaults to the current system)')
-    install_parser.add_argument('-f', '--force', action='store_true', help='force apt-get to proceed (--force-yes) even if a dangerous situation is detected')
+    install_parser.add_argument('--force', action='store_true', help='force apt-get to proceed (--force-yes) even if a dangerous situation is detected')
+    install_parser.add_argument('-f', '--fix-broken', action='store_true', help='Tell apt-get to attempt to resolve broken dependencies (not fully implemented yet, must manually copy resulting package list)')
     install_parser.add_argument('packages', type=native_to_unicode, nargs='*', help='package name(s) to be installed')
     
     # Create a parser for the download command
     download_parser = sub_parsers.add_parser('download', help='download files/packages needed to complete pending actions (network connectivity required)')
     download_parser.add_argument('-t', '--target', metavar='hostname', type=native_to_unicode, help='the hostname of the system to complete pending downloads for (default is all systems)')
-    download_parser.add_argument('-f', '--force', action='store_true', help='force apt-get to proceed (--force-yes) even if a dangerous situation is detected')
+    download_parser.add_argument('--force', action='store_true', help='force apt-get to proceed (--force-yes) even if a dangerous situation is detected')
+    download_parser.add_argument('--allow-unauthenticated', action='store_true', help='tell apt-get to proceed even if downloads cannot be authenticated')
     
     # TODO: Create a parser for the show-queue command
     
@@ -309,6 +311,7 @@ def install_action(args):
     install_medium = args.install_medium
     packages = args.packages
     force = args.force
+    fix_broken = args.fix_broken
     local_is_target = target == socket.gethostname()
     
     target_info_dir = os.path.join(install_medium, 'system_info', target)
@@ -321,7 +324,8 @@ def install_action(args):
         return -1
     
     # If target is initialized and target is this system, reinitialize to ensure we are up to date
-    init_action()
+    if local_is_target:
+        init_action()
     
     # Prepare configuration file to redirect location of /etc/apt in apt-get
     env = setup_config_redirect(os.environ, target_apt_dir)
@@ -337,16 +341,23 @@ def install_action(args):
     parms.append(os.path.join(target_apt_dir, 'apt-medium.conf'))
     
     parms.append('install')
-    if packages:
-        parms.extend(packages)
+    
+    if fix_broken:
+        parms.append('--fix-broken')
+    
+        if packages:
+            parms.extend(packages)
     else:
-        state = load_medium_state()
-        if len(state['install_queue'][target]) > 0:
-            packages = state['install_queue'][target]
+        if packages:
             parms.extend(packages)
         else:
-            print('Nothing to install')
-            return 0
+            state = load_medium_state()
+            if len(state['install_queue'][target]) > 0:
+                packages = state['install_queue'][target]
+                parms.extend(packages)
+            else:
+                print('Nothing to install')
+                return 0
     
     if force:
         parms.append('--force-yes')
@@ -374,7 +385,7 @@ def install_action(args):
     if num_missing > 0:
         print('Need to download ' + str(num_missing) + ' packages totaling ' + '{:,}'.format(total_size) + ' bytes')
         while True:
-            print('Add to download queue? Yes (y), No(n), or Show Details (s):', end='')
+            print('Add to download queue? Yes (y), No(n), or Show Details (s) or Print URIs (p):', end='')
             sys.stdout.flush()
             response = getch()
             print(response)
@@ -392,6 +403,11 @@ def install_action(args):
                     print(line)
                     if re.search(r'[0-9]* newly installed', line):
                         break
+                print()
+            elif response == 'p':
+                print()
+                for item in uris:
+                    print(item)
                 print()
             else:
                 print('Invalid selection.')
@@ -509,6 +525,8 @@ def install_action(args):
 def download_action(args):
     install_medium = args.install_medium
     target = args.target
+    force = args.force
+    allow_unauth = args.allow_unauthenticated
     
     state = load_medium_state()
     if target:
@@ -617,6 +635,9 @@ def download_action(args):
             parms.append('--force-yes')
         else:
             parms.append('--assume-yes')
+        
+        if allow_unauth:
+            parms.append('--allow-unauthenticated')
         
         parms.append(action)
         if addtnl_params:
