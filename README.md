@@ -1,14 +1,16 @@
 # apt-medium
 Manages an installation medium for installing/updating packages on multiple (possibly disconnected and/or remote) systems.
 
-This application is in very early development. While the steps detailed above should function, some key functionality is still missing (e.g. easily upgrading all packages on a system).
+This application is in very early development. While the steps detailed below should function, some functionality is still missing (e.g. recovering from certain broken package states).
 ## Requirements
 ### Dependencies
 - apt-get
 - dpkg
 - python 2.7.x or 3.x
+- python-setuptools (to install AptMedium, not required)
 ### Installation Medium
 - Must be writable
+- Must support Unix file permissions (at runtime only, when moving between systems it is not important that these permissions be maintained/restored)
 ### Permissions
 - All apt-medium commands must be run as root (if present, sudo will automatically be invoked to elevate permissions as needed)
 
