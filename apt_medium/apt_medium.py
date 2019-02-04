@@ -15,7 +15,7 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
     Based on a proof-of-concept written by Christian Gatzemeier (Copyright (c) 2007)  
-    Copyright (c) 2017 Riley Baxter
+    Copyright (c) 2018 Riley Baxter
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals

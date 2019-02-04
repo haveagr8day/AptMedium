@@ -13,7 +13,7 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-    Copyright (c) 2017 Riley Baxter
+    Copyright (c) 2018 Riley Baxter
 """
 
 def getch():
