@@ -21,7 +21,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import argparse
-import distutils.spawn
 import os
 import re
 import shutil
@@ -36,6 +35,11 @@ try:
     import cPickle as pickle
 except ImportError as _:
     import pickle
+
+try:
+    from distutils.spawn import find_executable as find_exe
+except ImportError as _:
+    from shutil import which as find_exe
 
 tempfiles = []
 
@@ -141,15 +145,15 @@ def check_sysreqs():
     # Check if we are running as root
     if os.geteuid() != 0:
         # If not, restart ourselves as root
-        #if distutils.spawn.find_executable('sudo'):
+        #if find_exe('sudo'):
         #    os.execvp("sudo", ["sudo"] + sys.argv)
         #else:
         raise Exception('apt-medium must be run as root, and sudo cannot be found in PATH.')
     
-    if not distutils.spawn.find_executable('apt-get'):
+    if not find_exe('apt-get'):
         raise Exception('Cannot find apt-get in PATH.')
     
-    if not distutils.spawn.find_executable('dpkg'):
+    if not find_exe('dpkg'):
         raise Exception('Cannot find dpkg in PATH.')
 
 def sync_local_lists():
@@ -184,7 +188,7 @@ def validate_queues():
     raise NotImplementedError()
 
 def setup_config_redirect(env, config_location):
-    redir_conf = tempfile.NamedTemporaryFile()
+    redir_conf = tempfile.NamedTemporaryFile(mode='w')
     tempfiles.append(redir_conf)
     redir_conf.write('Dir::Etc "' + config_location + '";')
     env['APT_CONFIG'] = redir_conf.name
