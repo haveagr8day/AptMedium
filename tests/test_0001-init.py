@@ -1,17 +1,10 @@
-from apt_medium.apt_medium import parse_args, process_args
-from argparse import Namespace
+from .shared_test_code import run, init_cwd, init_non_cwd
 import os
 import pytest
-import shutil
 import socket
-import sys
-import tempfile
 
-def verify(dir,in_args):
-    parsed_args = parse_args(in_args)
-    retCode = process_args(parsed_args)
-    assert retCode == 0
-    os.chdir(dir)
+def verify(initdir):
+    os.chdir(initdir)
     hostname = socket.gethostname()
     assert os.path.isdir(os.path.join('archives', 'partial'))
     assert os.path.isdir(os.path.join('lists', 'partial'))
@@ -23,21 +16,11 @@ def verify(dir,in_args):
     assert os.path.isdir(os.path.join('var', 'log', 'apt'))
 
 def test_init_cwd():
-    tempdir = tempfile.mkdtemp()
-    os.chdir(tempdir)
-    args = ['init']
-    try:
-        verify(tempdir, args)
-    finally:
-        shutil.rmtree(tempdir)
+    with init_cwd() as (retCode, initdir):
+        assert retCode == 0
+        verify(initdir)
 
 def test_init_non_cwd():
-    cwd = tempfile.mkdtemp()
-    os.chdir(cwd)
-    tempdir = tempfile.mkdtemp()
-    args = ['-m', tempdir, 'init']
-    try:
-        verify(tempdir, args)
-    finally:
-        shutil.rmtree(tempdir)
-        shutil.rmtree(cwd)
+    with init_non_cwd() as (retCode, initdir):
+        assert retCode == 0
+        verify(initdir)
