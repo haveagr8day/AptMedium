@@ -148,7 +148,7 @@ def check_sysreqs():
         #if find_exe('sudo'):
         #    os.execvp("sudo", ["sudo"] + sys.argv)
         #else:
-        raise Exception('apt-medium must be run as root, and sudo cannot be found in PATH.')
+        raise Exception('apt-medium must be run as root.')
     
     if not find_exe('apt-get'):
         raise Exception('Cannot find apt-get in PATH.')
