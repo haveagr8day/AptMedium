@@ -10,7 +10,8 @@ python:
 - nightly
 - pypy
 - pypy3
-sudo: required
+dist: xenial
+os: linux
 install:
 - pip install pytest
 - pyloc=$(which python)
