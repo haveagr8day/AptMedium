@@ -1,9 +1,13 @@
 from .shared_test_code import run, init_cwd
 from apt_medium.apt_medium import load_medium_state
-import io
 import pytest
 import re
 import socket
+
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 simplepkg = 'fonts-3270'
 complexpkg = 'wireshark'
@@ -12,7 +16,7 @@ complexpkg = 'wireshark'
 def test_queue_direct(capsys, monkeypatch, hostname):
     with init_cwd() as (retCode, initDir):
         args = ['install', simplepkg]
-        monkeypatch.setattr('sys.stdin', io.StringIO('y'))
+        monkeypatch.setattr('sys.stdin', StringIO('y'))
         assert run(args) == 0
         captured = capsys.readouterr()
         output = captured.out.splitlines()
@@ -26,7 +30,7 @@ def test_queue_direct(capsys, monkeypatch, hostname):
 def test_queue_show_details(capsys, monkeypatch):
     with init_cwd() as (retCode, initDir):
         args = ['install', simplepkg]
-        monkeypatch.setattr('sys.stdin', io.StringIO('sn'))
+        monkeypatch.setattr('sys.stdin', StringIO('sn'))
         assert run(args) == 0
         captured = capsys.readouterr()
         assert re.search("The following NEW packages will be installed:\n  fonts-3270\n0 upgraded, 1 newly installed", captured.out)
@@ -35,7 +39,7 @@ def test_queue_show_details(capsys, monkeypatch):
 def test_queue_print_uri(capsys, monkeypatch):
     with init_cwd() as (retCode, initDir):
         args = ['install', simplepkg]
-        monkeypatch.setattr('sys.stdin', io.StringIO('pn'))
+        monkeypatch.setattr('sys.stdin', StringIO('pn'))
         assert run(args) == 0
         captured = capsys.readouterr()
         assert re.search("'http:\\/\\/.*fonts-3270.*\\.deb' fonts-3270.*\\.deb [0-9]+", captured.out)
@@ -44,7 +48,7 @@ def test_queue_print_uri(capsys, monkeypatch):
 def test_queue_with_deps(capsys, monkeypatch, hostname):
     with init_cwd() as (retCode, initDir):
         args = ['install', complexpkg]
-        monkeypatch.setattr('sys.stdin', io.StringIO('y'))
+        monkeypatch.setattr('sys.stdin', StringIO('y'))
         assert run(args) == 0
         captured = capsys.readouterr()
         output = captured.out.splitlines()
