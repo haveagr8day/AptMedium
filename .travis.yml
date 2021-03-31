@@ -20,9 +20,6 @@ script:
 - sudo add-apt-repository universe
 - sudo add-apt-repository multiverse
 - sudo add-apt-repository restricted
-- sudo apt-get install -f
-- sudo apt-get install fonts-3270
-- sudo apt-get install wireshark
 - sudo $pyloc -m pytest
 notifications:
   slack:
