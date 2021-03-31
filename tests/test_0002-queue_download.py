@@ -1,6 +1,7 @@
 from .shared_test_code import run, init_cwd
 from apt_medium.apt_medium import load_medium_state
 import pytest
+import os
 import re
 import socket
 
@@ -8,6 +9,13 @@ try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO
+
+try
+    from socket import sethostname
+except ImportError:
+    def sethostname(hostname):
+        os.system("hostname %s" % (hostname))
+        assert socket.gethostname() == hostname
 
 simplepkg = 'fonts-3270'
 complexpkg = 'wireshark'
@@ -30,7 +38,7 @@ def test_queue_direct(capsys, monkeypatch, hostname):
 # Test queuing downloads for a different system
 def test_queue_indirect(capsys, monkeypatch, hostname):
     with init_cwd() as (retCode, initDir):
-        socket.sethostname(bogushostname)
+        sethostname(bogushostname)
         args = ['install', '--target=%s' % (hostname), simplepkg]
         monkeypatch.setattr('sys.stdin', StringIO('y'))
         assert run(args) == 0
@@ -43,7 +51,7 @@ def test_queue_indirect(capsys, monkeypatch, hostname):
         assert state['download_queue'][hostname] == [simplepkg]
         assert bogushostname not in state['download_queue']
         assert bogushostname not in state['install_queue']
-        socket.sethostname(hostname)
+        sethostname(hostname)
 
 # Test show details
 def test_queue_show_details(capsys, monkeypatch):
