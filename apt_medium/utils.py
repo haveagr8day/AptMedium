@@ -19,6 +19,11 @@
 def getch():
     import sys, tty, termios #@UnresolvedImport Suppress an incorrect PyDev error
     
+    # Don't modify stdin during tests, just read a character
+    if "pytest" in sys.modules:
+        ch = sys.stdin.read(1)
+        return ch
+    
     # Save original state of stdin
     stdin_fd = sys.stdin.fileno()
     orig_settings = termios.tcgetattr(stdin_fd)
