@@ -20,6 +20,7 @@ script:
 - sudo add-apt-repository universe
 - sudo add-apt-repository multiverse
 - sudo add-apt-repository restricted
+- sudo apt-get update
 - sudo apt-get remove --purge fonts-3270
 - sudo apt-get remove --purge wireshark
 - sudo apt-get autoremove
