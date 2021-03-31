@@ -10,7 +10,7 @@ try:
 except ImportError:
     from io import StringIO
 
-try
+try:
     from socket import sethostname
 except ImportError:
     def sethostname(hostname):
