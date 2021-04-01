@@ -910,8 +910,10 @@ def download_action(args):
     
     if success:
         print('\nDownload completed successfully')
+        return 0
     else:
         print('\nOne or more download actions failed')
+        return -1
 
 if __name__ == '__main__':
     main()
