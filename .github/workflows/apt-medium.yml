@@ -1,0 +1,39 @@
+name: Apt-Medium
+
+on: [push]
+
+jobs:
+  build:
+    
+    runs-on: ubuntu-latest
+    strategy:
+        matrix:
+            python-version: [2.7, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 3.10-dev, pypy-2.7, pypy-3.9]
+    
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install pytest
+      run: |
+        pyloc=$(which python)
+        sudo $pyloc -m pip install pytest
+    - name: Install Apt-Medium
+      run: |
+        sudo $pyloc setup.py install
+    - name: Apt preparations
+      run: |
+        sudo add-apt-repository universe
+        sudo add-apt-repository multiverse
+        sudo add-apt-repository restricted
+        sudo apt-get update
+        sudo apt-get remove --purge fonts-3270
+        sudo apt-get remove --purge fonts-alee
+        sudo apt-get remove --purge tshark
+        sudo apt-get remove --purge libwireshark*
+        sudo apt-get autoremove
+    - name: Run tests
+      run: |
+        sudo $pyloc -m pytest
