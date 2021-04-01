@@ -16,8 +16,7 @@ install:
 - pip install pytest
 - pyloc=$(which python)
 - sudo $pyloc setup.py install
-script:
-- pyloc=$(which python)
+before_script:
 - sudo add-apt-repository universe
 - sudo add-apt-repository multiverse
 - sudo add-apt-repository restricted
@@ -27,6 +26,8 @@ script:
 - sudo apt-get remove --purge tshark
 - sudo apt-get remove --purge libwireshark*
 - sudo apt-get autoremove
+script:
+- pyloc=$(which python)
 - sudo $pyloc -m pytest
 notifications:
   slack:
