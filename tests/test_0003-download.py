@@ -19,7 +19,7 @@ except ImportError:
         assert socket.gethostname() == hostname
 
 simplepkg = 'fonts-3270'
-simplepkg2 = 'fonts-adf-accanthis'
+simplepkg2 = 'fonts-alee'
 complexpkg = 'tshark'
 complexdep = 'libwireshark'
 bogushostname = 'somethingelse'
