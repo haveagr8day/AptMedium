@@ -18,3 +18,7 @@ __pycache__
 /medium_state
 /.project
 /.pydevproject
+
+# Coverage checks
+.coverage
+htmlcov
