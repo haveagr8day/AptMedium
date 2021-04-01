@@ -22,6 +22,7 @@ jobs:
         sudo $pyloc -m pip install pytest
     - name: Install Apt-Medium
       run: |
+        pyloc=$(which python)
         sudo $pyloc setup.py install
     - name: Apt preparations
       run: |
@@ -36,4 +37,5 @@ jobs:
         sudo apt-get autoremove
     - name: Run tests
       run: |
+        pyloc=$(which python)
         sudo $pyloc -m pytest
