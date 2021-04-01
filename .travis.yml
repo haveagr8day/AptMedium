@@ -23,7 +23,9 @@ script:
 - sudo add-apt-repository restricted
 - sudo apt-get update
 - sudo apt-get remove --purge fonts-3270
-- sudo apt-get remove --purge wireshark
+- sudo apt-get remove --purge fonts-alee
+- sudo apt-get remove --purge tshark
+- sudo apt-get remove --purge libwireshark*
 - sudo apt-get autoremove
 - sudo $pyloc -m pytest
 notifications:
