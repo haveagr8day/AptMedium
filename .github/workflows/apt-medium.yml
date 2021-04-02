@@ -18,7 +18,7 @@ jobs:
         SLACK_BOT_TOKEN: ${{ secrets.SLACK_NOTIFICATIONS_BOT_TOKEN }}
       uses: voxmedia/github-action-slack-notify-build@v1
       with:
-        channel: C73STSV9A
+        channel_id: C73STSV9A
         status: STARTING
         color: warning
     - uses: actions/checkout@v2
@@ -56,7 +56,7 @@ jobs:
       uses: voxmedia/github-action-slack-notify-build@v1
       with:
         message_id: ${{ steps.slack.outputs.message_id }}
-        channel: C73STSV9A
+        channel_id: C73STSV9A
         status: SUCCESS
         color: good
     - name: Notify Slack Failure
