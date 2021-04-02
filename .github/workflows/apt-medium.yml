@@ -42,6 +42,7 @@ jobs:
       run: |
         pyloc=$(which python)
         sudo $pyloc -m pip install pytest
+        false
     - name: Install Apt-Medium
       run: |
         pyloc=$(which python)
