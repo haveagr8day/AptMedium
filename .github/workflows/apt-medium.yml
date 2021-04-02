@@ -65,6 +65,7 @@ jobs:
   notify_result:
     runs-on: ubuntu-18.04
     needs: test
+    if: always()
     steps:
     - name: Get messageID
       uses: actions/download-artifact@v2
