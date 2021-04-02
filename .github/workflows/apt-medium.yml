@@ -11,6 +11,16 @@ jobs:
             python-version: [2.7, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 3.10-dev, pypy-2.7, pypy-3.7]
     
     steps:
+    - name: Notify Slack Started
+      if: success()
+      id: slack
+      env:
+        SLACK_BOT_TOKEN: ${{ secrets.SLACK_NOTIFICATIONS_BOT_TOKEN }}
+      uses: voxmedia/github-action-slack-notify-build@v1
+      with:
+        channel: C73STSV9A
+        status: STARTING
+        color: warning
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
@@ -39,3 +49,23 @@ jobs:
       run: |
         pyloc=$(which python)
         sudo $pyloc -m pytest
+    - name: Notify Slack Success
+      if: success()
+      env:
+        SLACK_BOT_TOKEN: ${{ secrets.SLACK_NOTIFICATIONS_BOT_TOKEN }}
+      uses: voxmedia/github-action-slack-notify-build@v1
+      with:
+        message_id: ${{ steps.slack.outputs.message_id }}
+        channel: C73STSV9A
+        status: SUCCESS
+        color: good
+    - name: Notify Slack Failure
+      if: failure()
+      env:
+        SLACK_BOT_TOKEN: ${{ secrets.SLACK_NOTIFICATIONS_BOT_TOKEN }}
+      uses: voxmedia/github-action-slack-notify-build@v1
+      with:
+        message_id: ${{ steps.slack.outputs.message_id }}
+        channel_id: C73STSV9A
+        status: FAILED
+        color: danger
