@@ -7,12 +7,12 @@ This application is in very early development. While the steps detailed below sh
 - apt-get
 - dpkg
 - python 2.7.x or 3.x
-- python-setuptools (to install AptMedium, not required)
+- python-setuptools (needed to install AptMedium, not required to run)
 ### Installation Medium
 - Must be writable
 - Must support Unix file permissions (at runtime only, when moving between systems it is not important that these permissions be maintained/restored)
 ### Permissions
-- All apt-medium commands must be run as root (if present, sudo will automatically be invoked to elevate permissions as needed)
+- All apt-medium commands must be run as root
 
 ## General Usage
 Note: apt-medium must either be run with your installation medium directory as the working directory or with the '-m' option flag followed by the path to your installation medium directory.
@@ -31,6 +31,18 @@ Note: apt-medium must either be run with your installation medium directory as t
 
 * After downloading, you just run "apt-medium install" on your target systems and the packages that have been fully downloaded and are marked for installation on that system will get installed.
 
+## Example
+To install wireshark on an offline system:
+<pre>
+Offline System (hostname:offline)              Internet Connected System
+apt-medium init
+                   ------------------------>
+                                               apt-medium update
+                                               apt-medium install --target offline wireshark
+                                               apt-medium download
+                   <------------------------
+apt-medium install
+</pre>
 ## Automated Testing Status
 [![Build Status](https://github.com/haveagr8day/AptMedium/actions/workflows/apt-medium.yml/badge.svg?branch=master)](https://github.com/haveagr8day/AptMedium/actions/workflows/apt-medium.yml)
 
