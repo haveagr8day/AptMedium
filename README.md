@@ -32,7 +32,7 @@ Note: apt-medium must either be run with your installation medium directory as t
 * After downloading, you just run "apt-medium install" on your target systems and the packages that have been fully downloaded and are marked for installation on that system will get installed.
 
 ## Automated Testing Status
-[![Build Status](https://github.com/haveagr8day/AptMedium/actions/workflows/apt-medium.yml/badge.svg)](https://github.com/haveagr8day/AptMedium/actions/workflows/apt-medium.yml)
+[![Build Status](https://github.com/haveagr8day/AptMedium/actions/workflows/apt-medium.yml/badge.svg?branch=master)](https://github.com/haveagr8day/AptMedium/actions/workflows/apt-medium.yml)
 
 ## License
 apt-medium is released under the [GPL version 2](https://opensource.org/licenses/GPL-2.0) or (at your option) any later version.
