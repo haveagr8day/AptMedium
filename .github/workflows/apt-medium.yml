@@ -74,8 +74,10 @@ jobs:
     - name: Load ID to environment
       run: |
         echo "messageID=`cat messageID.txt`" >> $GITHUB_ENV
+    - name: Get Workflow Result
+      uses: technote-space/workflow-conclusion-action@v2
     - name: Notify Slack Success
-      if: success()
+      if: env.WORKFLOW_CONCLUSION == 'success'
       env:
         SLACK_BOT_TOKEN: ${{ secrets.SLACK_NOTIFICATIONS_BOT_TOKEN }}
       uses: voxmedia/github-action-slack-notify-build@v1
@@ -85,7 +87,7 @@ jobs:
         status: SUCCESS
         color: good
     - name: Notify Slack Failure
-      if: failure()
+      if: env.WORKFLOW_CONCLUSION == 'failure'
       env:
         SLACK_BOT_TOKEN: ${{ secrets.SLACK_NOTIFICATIONS_BOT_TOKEN }}
       uses: voxmedia/github-action-slack-notify-build@v1
