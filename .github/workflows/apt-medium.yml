@@ -7,22 +7,11 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - name: Notify Slack Started
-      id: slack
       env:
-        SLACK_BOT_TOKEN: ${{ secrets.SLACK_NOTIFICATIONS_BOT_TOKEN }}
-      uses: voxmedia/github-action-slack-notify-build@v1
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      uses: act10ns/slack@v1
       with:
-        channel_id: C73STSV9A
-        status: STARTING
-        color: warning
-    - name: Write message ID
-      run: |
-        echo "${{ steps.slack.outputs.message_id }}" > messageID.txt
-    - name: Upload message ID
-      uses: actions/upload-artifact@v2
-      with:
-        name: messageID
-        path: messageID.txt
+        status: starting
       
   test: 
     runs-on: ubuntu-18.04
@@ -66,32 +55,11 @@ jobs:
     needs: test
     if: always()
     steps:
-    - name: Get messageID
-      uses: actions/download-artifact@v2
-      with:
-        name: messageID
-    - name: Load ID to environment
-      run: |
-        echo "messageID=`cat messageID.txt`" >> $GITHUB_ENV
     - name: Get Workflow Result
       uses: technote-space/workflow-conclusion-action@v2
-    - name: Notify Slack Success
-      if: env.WORKFLOW_CONCLUSION == 'success'
+    - name: Notify Slack Result
       env:
-        SLACK_BOT_TOKEN: ${{ secrets.SLACK_NOTIFICATIONS_BOT_TOKEN }}
-      uses: voxmedia/github-action-slack-notify-build@v1
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      uses: act10ns/slack@v1
       with:
-        message_id: ${{ env.messageID }}
-        channel_id: C73STSV9A
-        status: SUCCESS
-        color: good
-    - name: Notify Slack Failure
-      if: env.WORKFLOW_CONCLUSION == 'failure'
-      env:
-        SLACK_BOT_TOKEN: ${{ secrets.SLACK_NOTIFICATIONS_BOT_TOKEN }}
-      uses: voxmedia/github-action-slack-notify-build@v1
-      with:
-        message_id: ${{ env.messageID }}
-        channel_id: C73STSV9A
-        status: FAILED
-        color: danger
+        status: env.WORKFLOW_CONCLUSION
