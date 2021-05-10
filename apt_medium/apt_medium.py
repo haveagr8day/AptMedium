@@ -383,6 +383,7 @@ def upgrade_action(args, isDistUpgrade):
     for item in uris:
         item = item.split()
         if item == []: continue
+        if len(item) != 4: continue
         total_size += int(item[2])
         num_missing += 1
 
