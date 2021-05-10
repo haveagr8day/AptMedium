@@ -384,7 +384,7 @@ def upgrade_action(args, isDistUpgrade):
         item = item.split()
         if item == []: continue
         if len(item) != 4: continue
-        if not item[0].startswith('http'): continue
+        if not item[0].startswith("'http"): continue
         total_size += int(item[2])
         num_missing += 1
 
