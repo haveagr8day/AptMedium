@@ -68,6 +68,7 @@ def test_queue_print_uri(capsys, monkeypatch):
         args = ['install', simplepkg]
         monkeypatch.setattr('sys.stdin', StringIO('pn'))
         assert run(args) == 0
+        captured = capsys.readouterr()
         assert re.search("'.*:\\/+.*%s.*\\.deb' %s.*\\.deb [0-9]+" % (simplepkg, simplepkg), captured.out)
 
 # Test queuing package with dependencies
