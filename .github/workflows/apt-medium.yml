@@ -6,12 +6,12 @@ jobs:
   notify_start:
     runs-on: ubuntu-18.04
     steps:
-    - name: Notify Slack Started
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-      uses: act10ns/slack@v1
+    - name: Notify Discord Started
+      uses: rjstone/discord-webhook-notify@v1
       with:
-        status: starting
+        severity: info
+        details: Starting tests
+        webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
       
   test: 
     runs-on: ubuntu-18.04
