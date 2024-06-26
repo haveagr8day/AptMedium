@@ -55,11 +55,8 @@ jobs:
     needs: test
     if: always()
     steps:
-    - name: Get Workflow Result
-      uses: technote-space/workflow-conclusion-action@v2
-    - name: Notify Slack Result
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-      uses: act10ns/slack@v1
+    - name: Notify Discord Result
+      uses: sarisia/actions-status-discord@v1
+      if: always()
       with:
-        status: ${{ env.WORKFLOW_CONCLUSION }}
+        webhook: ${{ secrets.DISCORD_WEBHOOK }}
