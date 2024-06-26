@@ -59,10 +59,31 @@ jobs:
     # You can get the conclusion via env (env.WORKFLOW_CONCLUSION)
     - uses: technote-space/workflow-conclusion-action@v3
 
-    - name: Notify Discord Result
-      uses: sarisia/actions-status-discord@v1
-      if: always()
+    - name: Notify Discord Success
+      uses: rjstone/discord-webhook-notify@v1
       with:
-        webhook: ${{ secrets.DISCORD_WEBHOOK }}
-        status: ${{ env.WORKFLOW_CONCLUSION }}
-        username: GitHub Actions
+        severity: info
+        details: |
+          Result: ${{ env.WORKFLOW_CONCLUSION }}
+        webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+        if: env.WORKFLOW_CONCLUSION == 'success'
+    
+    - name: Notify Discord Failure
+      uses: rjstone/discord-webhook-notify@v1
+      with:
+        severity: error
+        details: |
+          Result: ${{ env.WORKFLOW_CONCLUSION }}
+        webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+        if: env.WORKFLOW_CONCLUSION == 'failure'
+   
+    - name: Notify Discord Warn
+      uses: rjstone/discord-webhook-notify@v1
+      with:
+        severity: warn
+        details: |
+          Result: ${{ env.WORKFLOW_CONCLUSION }}
+        webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+        if: env.WORKFLOW_CONCLUSION != 'failure' && env.WORKFLOW_CONCLUSION != 'success'
+
+
