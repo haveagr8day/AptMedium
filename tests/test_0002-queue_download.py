@@ -69,6 +69,7 @@ def test_queue_print_uri(capsys, monkeypatch):
         monkeypatch.setattr('sys.stdin', StringIO('pn'))
         assert run(args) == 0
         captured = capsys.readouterr()
+        import sys
         print(captured.out, file=sys.stderr)
         assert re.search("'http:\\/\\/.*%s.*\\.deb' %s.*\\.deb [0-9]+" % (simplepkg, simplepkg), captured.out)
 
