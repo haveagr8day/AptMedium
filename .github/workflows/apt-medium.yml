@@ -66,7 +66,7 @@ jobs:
         details: |
           Result: ${{ env.WORKFLOW_CONCLUSION }}
         webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
-        if: env.WORKFLOW_CONCLUSION == 'success'
+      if: env.WORKFLOW_CONCLUSION == 'success'
     
     - name: Notify Discord Failure
       uses: rjstone/discord-webhook-notify@v1
@@ -75,7 +75,7 @@ jobs:
         details: |
           Result: ${{ env.WORKFLOW_CONCLUSION }}
         webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
-        if: env.WORKFLOW_CONCLUSION == 'failure'
+      if: env.WORKFLOW_CONCLUSION == 'failure'
    
     - name: Notify Discord Warn
       uses: rjstone/discord-webhook-notify@v1
@@ -84,6 +84,6 @@ jobs:
         details: |
           Result: ${{ env.WORKFLOW_CONCLUSION }}
         webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
-        if: env.WORKFLOW_CONCLUSION != 'failure' && env.WORKFLOW_CONCLUSION != 'success'
+      if: env.WORKFLOW_CONCLUSION != 'failure' && env.WORKFLOW_CONCLUSION != 'success'
 
 
