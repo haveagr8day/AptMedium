@@ -55,10 +55,14 @@ jobs:
     needs: test
     if: always()
     steps:
+    # run this action to get the workflow conclusion
+    # You can get the conclusion via env (env.WORKFLOW_CONCLUSION)
+    - uses: technote-space/workflow-conclusion-action@v3
+
     - name: Notify Discord Result
       uses: sarisia/actions-status-discord@v1
       if: always()
       with:
         webhook: ${{ secrets.DISCORD_WEBHOOK }}
-        status: ${{ job.status }}
+        status: ${{ env.WORKFLOW_CONCLUSION }}
         username: GitHub Actions
