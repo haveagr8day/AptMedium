@@ -78,11 +78,13 @@ def parse_args(in_args):
     # Create a parser for the upgrade command
     upgrade_parser = sub_parsers.add_parser('upgrade', help='update all currently installed packages to latest versions (based on current package lists, may need to use "update" first to achieve desired effect)')
     upgrade_parser.add_argument('--force', action='store_true', help='force apt-get to proceed (--force-yes) even if a dangerous situation is detected')
+    upgrade_parser.add_argument('-f', '--fix-broken', action='store_true', help='Tell apt-get to attempt to resolve broken dependencies (not fully implemented yet, must manually copy resulting package list)')
     upgrade_parser.add_argument('-t', '--target', metavar='hostname', type=native_to_unicode, default=socket.gethostname(), help='the hostname of the target system to perform the upgrades on (defaults to the current system)')
   
     # Create a parser for the dist-upgrade command
     dist_upgrade_parser = sub_parsers.add_parser('dist-upgrade', help='update all currently installed packages (including adding or removing packages as needed to resolve dependencies) (based on current package lists, may need to use "update" first to achieve desired effect)')
     dist_upgrade_parser.add_argument('--force', action='store_true', help='force apt-get to proceed (--force-yes) even if a dangerous situation is detected')
+    dist_upgrade_parser.add_argument('-f', '--fix-broken', action='store_true', help='Tell apt-get to attempt to resolve broken dependencies (not fully implemented yet, must manually copy resulting package list)')
     dist_upgrade_parser.add_argument('-t', '--target', metavar='hostname', type=native_to_unicode, default=socket.gethostname(), help='the hostname of the target system to perform the upgrades on (defaults to the current system)')
     
     # Create a parser for the install command
@@ -328,6 +330,7 @@ def upgrade_action(args, isDistUpgrade):
     target = args.target
     install_medium = args.install_medium
     force = args.force
+    fix_broken = args.fix_broken
     
     local_is_target = target == socket.gethostname()
     
@@ -362,6 +365,9 @@ def upgrade_action(args, isDistUpgrade):
         parms.append('dist-upgrade')
     else:
         parms.append('upgrade')
+    
+    if fix_broken:
+        parms.append('--fix-broken')
     
     if force:
         parms.append('--force-yes')
