@@ -31,6 +31,10 @@ jobs:
       run: |
         pyloc=$(which python)
         sudo $pyloc -m pip install pytest
+    - name: Install setuptools
+      run: |
+        pyloc=$(which python)
+        sudo $pyloc -m pip install setuptools
     - name: Install Apt-Medium
       run: |
         pyloc=$(which python)
